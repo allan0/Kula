@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0F0F0F; /* Rich Black */
+  --foreground: #F3E5AB;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  /* This creates a subtle luxury paper/leather texture */
+  background-image: url("https://www.transparenttextures.com/patterns/black-paper.png");
+  font-family: 'Playfair Display', serif; /* Or any luxury font */
+}
+
+.glass-card {
+  background: rgba(62, 39, 35, 0.2);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+}
+
+.gold-text {
+  @apply bg-gold-gradient bg-clip-text text-transparent font-bold;
+}
