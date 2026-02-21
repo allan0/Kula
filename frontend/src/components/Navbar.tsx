@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { Wallet, ShieldCheck } from "lucide-react";
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function Navbar() {
   return (
@@ -10,14 +10,30 @@ export default function Navbar() {
         <span className="text-2xl font-serif tracking-widest gold-text uppercase">Kula</span>
       </motion.div>
 
-      <motion.button
-        whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(212, 175, 55, 0.3)" }}
-        whileTap={{ scale: 0.95 }}
-        className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-gold-dark to-gold rounded-full text-earth-dark font-bold tracking-tighter shadow-lg"
+      <motion.div
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
       >
-        <Wallet size={18} />
-        ENTER VAULT
-      </motion.button>
+        <ConnectButton.Custom>
+          {({ account, chain, openConnectModal, mounted }) => {
+            return (
+              <div
+                {...(!mounted && {
+                  'aria-hidden': true,
+                  'style': { opacity: 0, pointerEvents: 'none', userSelect: 'none' },
+                })}
+              >
+                <button
+                  onClick={openConnectModal}
+                  className="px-6 py-2 bg-gradient-to-r from-gold-dark to-gold rounded-full text-earth-dark font-bold tracking-tighter shadow-lg hover:scale-105 transition-transform"
+                >
+                  {account ? account.displayName : "ENTER VAULT"}
+                </button>
+              </div>
+            );
+          }}
+        </ConnectButton.Custom>
+      </motion.div>
     </nav>
   );
 }
