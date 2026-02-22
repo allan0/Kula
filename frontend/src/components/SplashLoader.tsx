@@ -6,7 +6,8 @@ export default function SplashLoader() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 5000); // Adjust to video length
+    // Increase timer if your video is longer
+    const timer = setTimeout(() => setLoading(false), 4000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -16,28 +17,37 @@ export default function SplashLoader() {
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1, ease: "easeInOut" }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-earth-dark"
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-earth-dark overflow-hidden"
         >
-          <video
-            autoPlay
-            muted
-            playsInline
-            className="w-full h-full object-cover opacity-80"
-          >
-            <source src="/assets/kula.mp4" type="video/mp4" />
-          </video>
+          {/* Main Video Background */}
+          <div className="absolute inset-0 w-full h-full">
+            <video
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover pointer-events-none"
+            >
+              <source src="/assets/kula.mp4" type="video/mp4" />
+            </video>
+            
+            {/* Dark Cinematic Vignette */}
+            <div className="absolute inset-0 bg-radial-[circle_at_center,_transparent_0%,_rgba(27,18,18,0.8)_100%] border-none" />
+          </div>
           
-          {/* Subtle Overlay to blend with colors */}
-          <div className="absolute inset-0 bg-gradient-to-t from-earth-dark via-transparent to-earth-dark opacity-60" />
-          
+          {/* Logo Reveal */}
           <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.5, duration: 1 }}
-            className="absolute"
+            initial={{ scale: 0.9, opacity: 0, letterSpacing: "0.2em" }}
+            animate={{ scale: 1, opacity: 1, letterSpacing: "0.5em" }}
+            transition={{ delay: 1, duration: 2 }}
+            className="relative z-10 flex flex-col items-center"
           >
-             <img src="/assets/kulalogo.png" alt="KULA" className="w-48 h-auto drop-shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
+             <img 
+               src="/assets/kulalogo.png" 
+               alt="KULA" 
+               className="w-32 md:w-48 h-auto drop-shadow-[0_0_20px_rgba(212,175,55,0.4)] mb-4" 
+             />
+             <h1 className="gold-text text-3xl md:text-5xl font-serif uppercase tracking-[1em]">KULA</h1>
           </motion.div>
         </motion.div>
       )}
