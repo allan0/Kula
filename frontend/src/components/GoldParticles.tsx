@@ -1,7 +1,18 @@
 "use client";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 export default function GoldParticles() {
+  const [mounted, setMounted] = useState(false);
+
+  // Only run after the component mounts on the client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Return nothing during Server Side Rendering to avoid mismatch
+  if (!mounted) return null;
+
   const particles = Array.from({ length: 20 });
 
   return (
