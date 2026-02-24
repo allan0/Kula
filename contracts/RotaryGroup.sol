@@ -42,3 +42,30 @@ contract RotaryGroup is ReentrancyGuard {
         return groups[_groupId].members;
     }
 }
+struct Proposal {
+    uint256 id;
+    string title;
+    string documentCid; // This stores the IPFS hash
+    uint256 price;
+    uint256 votesReceived;
+    bool executed;
+    mapping(address => bool) hasVoted;
+}
+
+mapping(uint256 => Proposal) public proposals;
+uint256 public proposalCount;
+
+function createAssetProposal(string memory _title, string memory _cid, uint256 _price) external {
+    proposalCount++;
+    Proposal storage p = proposals[proposalCount];
+    p.id = proposalCount;
+    p.title = _title;
+    p.documentCid = _cid;
+    p.price = _price;
+}
+
+function voteOnProposal(uint256 _id) external {
+    require(!proposals[_id].hasVoted[msg.sender], "Already voted");
+    proposals[_id].votesReceived++;
+    proposals[_id].hasVoted[msg.sender] = true;
+}
