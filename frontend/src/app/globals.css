@@ -1,16 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  /* Earth & Gold Palette */
   --color-gold-light: #F3E5AB;
   --color-gold: #D4AF37;
   --color-gold-dark: #996515;
-  
   --color-earth-light: #8D6E63;
   --color-earth: #3E2723;
   --color-earth-dark: #1B1212;
 
-  /* Exclusive Textures & Gradients */
   --background-image-gold-gradient: linear-gradient(
     to right, 
     #BF953F, 
@@ -23,46 +20,55 @@
 
 @layer base {
   :root {
-    --background: #0F0F0F; /* Rich Black */
+    --background: #0F0F0F;
     --foreground: #F3E5AB;
   }
 
   body {
     background-color: var(--background);
     color: var(--foreground);
-    /* Luxury Paper Texture */
     background-image: url("https://www.transparenttextures.com/patterns/black-paper.png");
-    font-family: 'Playfair Display', serif;
+    font-family: serif;
     @apply antialiased;
   }
 }
 
 @layer components {
-  /* Glassmorphism for Exclusive Vault feel */
   .glass-card {
     background: rgba(62, 39, 35, 0.2);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(212, 175, 55, 0.1);
   }
 
-  /* Premium Gold Text Clipping */
   .gold-text {
     background-image: var(--background-image-gold-gradient);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    font-weight: bold;
   }
-}
-html, body {
-  overflow-x: hidden;
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
 
-/* Ensure no scroll during Splash */
-body:has(.fixed.z-\[100\]) {
-  overflow: hidden;
+  .shimmer-text {
+    background: linear-gradient(
+      to right,
+      #996515 20%, 
+      #D4AF37 40%, 
+      #FCF6BA 50%, 
+      #D4AF37 60%, 
+      #996515 80%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shine 4s linear infinite;
+  }
+
+  @keyframes shine {
+    to { background-position: 200% center; }
+  }
+
+  .luxury-border {
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    background: linear-gradient(145deg, rgba(62, 39, 35, 0.2), rgba(27, 18, 18, 0.4));
+  }
 }

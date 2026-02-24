@@ -1,5 +1,5 @@
+import "./globals.css"; // Make sure there is an 's' at the end
 import type { Metadata } from "next";
-import "./globals.css";
 import { Providers } from "./providers";
 import SplashLoader from "@/components/SplashLoader";
 
@@ -15,12 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased overflow-x-hidden">
+      <body className="antialiased overflow-x-hidden bg-[#0F0F0F]">
         <Providers>
           <SplashLoader />
-          <main className="relative z-10">
-            {children}
-          </main>
+          {children}
         </Providers>
       </body>
     </html>
