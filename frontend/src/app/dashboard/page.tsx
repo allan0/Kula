@@ -1,33 +1,139 @@
-// 1. Add these imports at the top
+"use client";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useWriteContract, useAccount } from 'wagmi';
+import Navbar from "@/components/Navbar";
+import AssetVault from "@/components/AssetVault";
+import MarketplaceCard from "@/components/MarketplaceCard";
+import GoldParticles from "@/components/GoldParticles";
+import TreasurerView from "@/components/TreasurerView";
+import { Users, Landmark, Receipt, ShieldCheck } from "lucide-react";
 
-// ... inside the Dashboard function ...
-const { writeContract } = useWriteContract();
-const { address } = useAccount();
+export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState("rotary");
+  const { writeContract } = useWriteContract();
+  const { address } = useAccount();
 
-const handleVote = (proposalId: number) => {
-  if (!address) return alert("Please connect your vault key first.");
+  const tabs = [
+    { id: "rotary", label: "My Groups", desc: "Active Savings", icon: <Users size={14} /> },
+    { id: "assets", label: "Asset Vault", desc: "Land & Luxury", icon: <Landmark size={14} /> },
+    { id: "votes", label: "Voting Hall", desc: "Bills & Purchases", icon: <Receipt size={14} /> },
+    { id: "treasurer", label: "Treasurer", desc: "Audit & Verify", icon: <ShieldCheck size={14} /> },
+  ];
 
-  writeContract({
-    abi: [
-      {
-        "inputs": [{ "internalType": "uint256", "name": "_proposalId", "type": "uint256" }],
-        "name": "voteOnProposal",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      }
-    ],
-    address: '0xFfAB10611EF65d877Db508Fe9e7111Bb1C759Af8', // Your KULA Contract
-    functionName: 'voteOnProposal',
-    args: [BigInt(proposalId)],
-  });
-};
+  const handleVote = (proposalId: number) => {
+    if (!address) return alert("Please connect your vault key first.");
 
-// 2. Update the "APPROVE" button in the "votes" tab:
-<button 
-  onClick={() => handleVote(42)} 
-  className="w-full md:w-auto px-10 py-4 bg-gold text-earth-dark rounded-2xl font-black text-sm tracking-widest shadow-[0_10px_20px_rgba(212,175,55,0.2)] hover:scale-105 transition-transform"
->
-  APPROVE
-</button>
+    writeContract({
+      abi: [
+        {
+          "inputs": [{ "internalType": "uint256", "name": "_proposalId", "type": "uint256" }],
+          "name": "voteOnProposal",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        }
+      ],
+      address: '0xFfAB10611EF65d877Db508Fe9e7111Bb1C759Af8',
+      functionName: 'voteOnProposal',
+      args: [BigInt(proposalId)],
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-earth-dark text-gold-light selection:bg-gold selection:text-earth-dark pb-20 overflow-x-hidden">
+      <GoldParticles />
+      <Navbar />
+
+      <main className="relative z-10 pt-32 px-4 md:px-20 max-w-7xl mx-auto">
+        <header className="mb-12">
+          <motion.h2 initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-gold uppercase tracking-[0.3em] text-xs font-bold mb-2">
+            Executive Member Portal
+          </motion.h2>
+          <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="text-4xl md:text-6xl font-serif text-gold-light">
+            The Kula <span className="gold-text italic">Vault</span>
+          </motion.h1>
+        </header>
+
+        {/* Tab Navigation */}
+        <div className="flex overflow-x-auto no-scrollbar gap-4 md:gap-12 mb-12 border-b border-gold/10 pb-4">
+          {tabs.map((tab) => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="group relative flex-shrink-0 text-left outline-none">
+              <div className="flex items-center gap-2 mb-1">
+                <span className={activeTab === tab.id ? 'text-gold' : 'text-gold-light/40'}>{tab.icon}</span>
+                <span className={`text-sm tracking-widest uppercase font-bold transition-colors ${activeTab === tab.id ? 'text-gold' : 'text-gold-light/40 group-hover:text-gold-light'}`}>
+                  {tab.label}
+                </span>
+              </div>
+              <p className="text-[10px] text-gold-light/20 uppercase tracking-tighter">{tab.desc}</p>
+              {activeTab === tab.id && (
+                <motion.div layoutId="activeTabUnderline" className="absolute -bottom-[17px] left-0 w-full h-[2px] bg-gold shadow-[0_0_10px_#D4AF37]" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content Area */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -20, opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            {activeTab === "rotary" && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="md:col-span-2 p-10 glass-card rounded-[2rem] flex flex-col justify-between min-h-[350px] relative overflow-hidden group">
+                   <div className="relative z-10">
+                      <h3 className="gold-text text-xl uppercase tracking-widest mb-2">Portfolio Value</h3>
+                      <p className="text-6xl md:text-8xl font-serif text-gold-light mb-4 leading-none tracking-tighter">$12,400.00</p>
+                   </div>
+                   <div className="flex gap-4 mt-8 relative z-10">
+                     <button className="flex-1 py-4 bg-gold text-earth-dark rounded-2xl font-black text-sm tracking-widest hover:bg-gold-light transition-all">CONTRIBUTE</button>
+                     <button className="flex-1 py-4 bg-earth/40 border border-gold/30 text-gold rounded-2xl font-bold text-sm tracking-widest hover:bg-gold/10 transition-all">WITHDRAW</button>
+                   </div>
+                </div>
+                <div className="p-6 glass-card rounded-[2rem] border border-gold/10">
+                    <p className="text-[10px] text-gold/50 uppercase font-black mb-4 tracking-widest">Active Members</p>
+                    <div className="flex -space-x-3 mb-4">
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <div key={i} className="w-10 h-10 rounded-full bg-earth border-2 border-gold-dark flex items-center justify-center text-[10px] font-bold text-gold">M0{i}</div>
+                      ))}
+                    </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "assets" && (
+              <div className="space-y-12">
+                <AssetVault />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <MarketplaceCard type="Real Estate" title="5-Acre Kitengela Plot" location="Kajiado, Kenya" price="45k USDC" image="https://images.unsplash.com/photo-1500382017468-9049fed747ef" votes={12} />
+                  <MarketplaceCard type="Vehicle" title="Toyota Hilux 2024" location="Nairobi, KE" price="32k USDC" image="https://images.unsplash.com/photo-1621236304192-ef2f967f6004" votes={8} />
+                </div>
+              </div>
+            )}
+
+            {activeTab === "votes" && (
+              <div className="max-w-4xl mx-auto space-y-6">
+                <div className="p-8 glass-card rounded-[2rem] flex flex-col md:flex-row justify-between items-center border-l-4 border-gold gap-6">
+                  <div>
+                    <p className="text-gold text-xs uppercase font-bold tracking-widest">Proposal #42</p>
+                    <h4 className="text-2xl font-serif mb-2">Purchase: Kitengela Plot</h4>
+                    <p className="text-gold-light/50 text-sm">Collective disbursement of 15,000 USDC.</p>
+                  </div>
+                  <button onClick={() => handleVote(42)} className="w-full md:w-auto px-10 py-4 bg-gold text-earth-dark rounded-2xl font-black text-sm tracking-widest hover:scale-105 transition-transform">
+                    APPROVE
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "treasurer" && <TreasurerView />}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+    </div>
+  );
+}
