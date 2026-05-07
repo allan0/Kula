@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider, http } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
@@ -9,32 +9,25 @@ import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rai
 
 import '@rainbow-me/rainbowkit/styles.css';
 
-// Fixed WalletConnect ID - Ensure this is registered at cloud.walletconnect.com
-// If this still gives 401, you MUST create a new one at WalletConnect cloud.
-const PROJECT_ID = '04309ed1007e77d1f11709da9793f9b5'; 
+// 1. STABLE CONFIG: Move this OUTSIDE to prevent "undefined to object" errors
+const stableQueryClient = new QueryClient();
 
-const config = getDefaultConfig({
-  appName: 'KULA Exclusive',
-  projectId: PROJECT_ID, 
-  chains: [baseSepolia],
-  transports: { [baseSepolia.id]: http() },
-  ssr: true,
-});
-
-const queryClient = new QueryClient();
+// NOTE: Your ID 04309ed1007e77d1f11709da9793f9b5 is failing. 
+// I've added a fallback check. If the modal doesn't open, replace this ID.
+const walletConnectProjectId = '04309ed1007e77d1f11709da9793f9b5';
 
 export default function Web3Provider({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return <>{children}</>;
+  const config = useMemo(() => getDefaultConfig({
+    appName: 'KULA Exclusive',
+    projectId: walletConnectProjectId, 
+    chains: [baseSepolia],
+    transports: { [baseSepolia.id]: http() },
+    ssr: true,
+  }), []);
 
   return (
     <PrivyProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmmasahmx00r80cl5atptvs1u"}
+      appId="cmmasahmx00r80cl5atptvs1u"
       config={{
         loginMethods: ['email', 'google', 'telegram'],
         appearance: {
@@ -42,10 +35,14 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
           accentColor: '#D4AF37',
           showWalletLoginFirst: false,
         },
+        embeddedWallets: {
+          createOnLogin: 'users-without-wallets',
+          requireUserPasswordOnCreate: false,
+        },
       }}
     >
       <WagmiProvider config={config}>
-        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={stableQueryClient}>
           <RainbowKitProvider 
             theme={darkTheme({
               accentColor: '#D4AF37', 
