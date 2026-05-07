@@ -1,8 +1,7 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  // Standard Next.js 16 config
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
+  /* Vercel handles images and routing automatically */
 };
 
 export default nextConfig;
