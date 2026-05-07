@@ -1,13 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // This tells Next.js to compile Privy's code to avoid icon errors
-  transpilePackages: ['@privy-io/react-auth'],
+  transpilePackages: ['@privy-io/react-auth', '@privy-io/wagmi'],
   images: {
     unoptimized: true,
   },
-  // Disabling barrel optimization for icons to prevent build-time crashes
-  optimizePackageImports: ['lucide-react'],
+  // This disables the aggressive icon optimization that is crashing the build
+  optimizePackageImports: [] 
 };
 
 export default nextConfig;
