@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
@@ -10,8 +10,6 @@ import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rai
 // Import CSS for RainbowKit
 import '@rainbow-me/rainbowkit/styles.css';
 
-const queryClient = new QueryClient();
-
 export default function Web3Provider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
@@ -19,32 +17,31 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
     setMounted(true);
   }, []);
 
-  // 1. Setup the RainbowKit/Wagmi Config
-  const config = getDefaultConfig({
+  // Use useMemo to ensure config is stable and doesn't trigger re-renders
+  const config = useMemo(() => getDefaultConfig({
     appName: 'KULA Exclusive',
-    // Restored standard WalletConnect ID (Your Privy ID goes in the Provider below, not here)
-    projectId: '04309ed1007e77d1f11709da9793f9b5', 
+    projectId: '04309ed1007e77d1f11709da9793f9b5', // Ensure this is a valid WalletConnect ID
     chains: [baseSepolia],
     transports: {
       [baseSepolia.id]: http(),
     },
     ssr: true,
-  });
+  }), []);
 
-  // Prevent SSR crashes during Next.js compilation
-  if (!mounted) return null;
+  const queryClient = useMemo(() => new QueryClient(), []);
+
+  // Prevent hydration UI mismatch
+  if (!mounted) return <div style={{ visibility: 'hidden' }}>{children}</div>;
 
   return (
     <PrivyProvider
-      // CORRECTED: Your Privy App ID is now in the right place
-      appId="cmmasahmx00r80cl5atptvs1u" 
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmmasahmx00r80cl5atptvs1u"}
       config={{
-        loginMethods: ['email', 'google', 'facebook', 'linkedin', 'telegram'],
+        loginMethods: ['email', 'google', 'farcaster', 'telegram'],
         appearance: {
           theme: 'dark',
           accentColor: '#D4AF37',
           showWalletLoginFirst: false,
-          logo: '/assets/kulalogo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
