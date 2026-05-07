@@ -1,194 +1,60 @@
 "use client";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useWriteContract, useAccount } from 'wagmi';
-import Navbar from "@/components/Navbar";
-import AssetVault from "@/components/AssetVault";
-import MarketplaceCard from "@/components/MarketplaceCard";
-import GoldParticles from "@/components/GoldParticles";
-import TreasurerView from "@/components/TreasurerView";
-import MemberDirectory from "@/components/MemberDirectory";
-import { Users, Landmark, Receipt, ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
+import { User, ShieldCheck, Star } from "lucide-react";
 
-export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("rotary");
-  const { writeContract } = useWriteContract();
-  const { address } = useAccount();
+const members = [
+  { name: "Treasurer", role: "Admin", score: 98, status: "Online", address: "0x71C...34a9" },
+  { name: "Member #04", role: "Elite", score: 92, status: "Offline", address: "0x82D...11b2" },
+  { name: "Member #07", role: "Contributor", score: 85, status: "Online", address: "0x33A...99c1" },
+  { name: "Member #12", role: "New", score: 50, status: "Online", address: "0xFfA...08fe" },
+];
 
-  const tabs = [
-    { id: "rotary", label: "My Groups", desc: "Active Savings", icon: <Users size={14} /> },
-    { id: "assets", label: "Asset Vault", desc: "Land & Luxury", icon: <Landmark size={14} /> },
-    { id: "votes", label: "Voting Hall", desc: "Bills & Purchases", icon: <Receipt size={14} /> },
-    { id: "treasurer", label: "Treasurer", desc: "Audit & Verify", icon: <ShieldCheck size={14} /> },
-  ];
-
-  const handleVote = (proposalId: number) => {
-    if (!address) return alert("Please connect your vault key first.");
-
-    writeContract({
-      abi: [
-        {
-          "inputs": [{ "internalType": "uint256", "name": "_proposalId", "type": "uint256" }],
-          "name": "voteOnProposal",
-          "outputs": [],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        }
-      ],
-      address: '0xFfAB10611EF65d877Db508Fe9e7111Bb1C759Af8', // KULA Contract
-      functionName: 'voteOnProposal',
-      args: [BigInt(proposalId)],
-    });
-  };
-
+export default function MemberDirectory() {
   return (
-    <div className="min-h-screen bg-earth-dark text-gold-light selection:bg-gold selection:text-earth-dark pb-20 overflow-x-hidden">
-      <GoldParticles />
-      <Navbar />
+    <div className="glass-card rounded-[2.5rem] p-8 border border-gold/10">
+      <div className="flex justify-between items-center mb-8">
+        <h3 className="text-gold font-black text-[10px] uppercase tracking-[0.3em]">Circle Members</h3>
+        <span className="text-[10px] text-gold-light/40 uppercase">{members.length} Active</span>
+      </div>
 
-      <main className="relative z-10 pt-32 px-4 md:px-20 max-w-7xl mx-auto">
-        
-        {/* Header Section */}
-        <header className="mb-12">
-          <motion.h2 
-            initial={{ opacity: 0, x: -20 }}
+      <div className="space-y-6">
+        {members.map((member, i) => (
+          <motion.div 
+            key={i}
+            initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-gold uppercase tracking-[0.3em] text-xs font-bold mb-2"
+            transition={{ delay: i * 0.1 }}
+            className="flex items-center justify-between group"
           >
-            Executive Member Portal
-          </motion.h2>
-          <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl md:text-6xl font-serif text-gold-light"
-          >
-            The Kula <span className="gold-text italic">Vault</span>
-          </motion.h1>
-        </header>
-
-        {/* Tab Navigation */}
-        <div className="flex overflow-x-auto no-scrollbar gap-4 md:gap-12 mb-12 border-b border-gold/10 pb-4">
-          {tabs.map((tab) => (
-            <button 
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="group relative flex-shrink-0 text-left transition-all outline-none"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className={activeTab === tab.id ? 'text-gold' : 'text-gold-light/40'}>
-                  {tab.icon}
-                </span>
-                <span className={`text-sm tracking-widest uppercase font-bold transition-colors ${activeTab === tab.id ? 'text-gold' : 'text-gold-light/40 group-hover:text-gold-light'}`}>
-                  {tab.label}
-                </span>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center text-gold">
+                  <User size={18} />
+                </div>
+                {member.status === "Online" && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-earth-dark rounded-full" />
+                )}
               </div>
-              <p className="text-[10px] text-gold-light/20 uppercase tracking-tighter whitespace-nowrap">{tab.desc}</p>
-              
-              {activeTab === tab.id && (
-                <motion.div 
-                  layoutId="activeTabUnderline" 
-                  className="absolute -bottom-[17px] left-0 w-full h-[2px] bg-gold shadow-[0_0_10px_#D4AF37]" 
-                />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content Area */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -20, opacity: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-          >
-            {/* TAB: MY GROUPS */}
-            {activeTab === "rotary" && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-                <div className="md:col-span-2 p-10 glass-card rounded-[2rem] flex flex-col justify-between min-h-[350px] relative overflow-hidden group">
-                   <div className="relative z-10">
-                      <h3 className="gold-text text-xl uppercase tracking-widest mb-2">Portfolio Value</h3>
-                      <p className="text-6xl md:text-8xl font-serif text-gold-light mb-4 leading-none tracking-tighter">$12,400.00</p>
-                      <span className="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-[10px] font-bold tracking-widest uppercase border border-green-500/20">
-                        +12.4% Yield Generated
-                      </span>
-                   </div>
-                   <div className="flex gap-4 mt-8 relative z-10">
-                     <button className="flex-1 py-4 bg-gold text-earth-dark rounded-2xl font-black text-sm tracking-widest hover:bg-gold-light transition-all">CONTRIBUTE</button>
-                     <button className="flex-1 py-4 bg-earth/40 border border-gold/30 text-gold rounded-2xl font-bold text-sm tracking-widest hover:bg-gold/10 transition-all">WITHDRAW</button>
-                   </div>
-                   <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-gold/5 rounded-full blur-3xl group-hover:bg-gold/10 transition-all" />
-                </div>
-
-                {/* Sidebar: Member Directory replaces the old Active Member circle list */}
-                <div className="md:col-span-1">
-                  <MemberDirectory />
-                </div>
+              <div>
+                <p className="text-xs font-bold text-gold-light group-hover:text-gold transition-colors">{member.name}</p>
+                <p className="text-[8px] text-gold-light/30 uppercase tracking-tighter">{member.role} • {member.address}</p>
               </div>
-            )}
-
-            {/* TAB: ASSET VAULT */}
-            {activeTab === "assets" && (
-              <div className="space-y-12">
-                <AssetVault />
-                <div>
-                  <h3 className="text-2xl font-serif gold-text mb-8 tracking-widest uppercase">Verified Group Acquisitions</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <MarketplaceCard 
-                      type="Real Estate"
-                      title="5-Acre Kitengela Plot"
-                      location="Kajiado, Kenya"
-                      price="45,000 USDC"
-                      image="https://images.unsplash.com/photo-1500382017468-9049fed747ef"
-                      votes={12}
-                    />
-                    <MarketplaceCard 
-                      type="Vehicle"
-                      title="Toyota Hilux 2024"
-                      location="Nairobi, KE"
-                      price="32,000 USDC"
-                      image="https://images.unsplash.com/photo-1621236304192-ef2f967f6004"
-                      votes={8}
-                    />
-                  </div>
-                </div>
+            </div>
+            
+            <div className="text-right">
+              <div className="flex items-center gap-1 justify-end text-gold">
+                <Star size={8} fill="currentColor" />
+                <span className="text-[10px] font-black">{member.score}</span>
               </div>
-            )}
-
-            {/* TAB: VOTING HALL */}
-            {activeTab === "votes" && (
-              <div className="max-w-4xl mx-auto space-y-6">
-                <div className="mb-10">
-                  <h3 className="text-3xl font-serif gold-text">Active Proposals</h3>
-                  <p className="text-gold-light/40">Collective decisions on purchases and member support.</p>
-                </div>
-
-                <div className="p-8 glass-card rounded-[2rem] flex flex-col md:flex-row justify-between items-center border-l-4 border-gold gap-6">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] bg-gold text-earth-dark px-2 py-0.5 rounded font-black uppercase tracking-tighter">Urgent</span>
-                      <p className="text-gold text-xs uppercase font-bold tracking-widest">Proposal #42</p>
-                    </div>
-                    <h4 className="text-2xl font-serif mb-2">Purchase: 5-Acre Plot</h4>
-                    <p className="text-gold-light/50 text-sm">Release 15,000 USDC for final land settlement.</p>
-                  </div>
-                  <button 
-                    onClick={() => handleVote(42)}
-                    className="w-full md:w-auto px-10 py-4 bg-gold text-earth-dark rounded-2xl font-black text-sm tracking-widest shadow-[0_10px_20px_rgba(212,175,55,0.2)] hover:scale-105 transition-transform"
-                  >
-                    APPROVE
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: TREASURER */}
-            {activeTab === "treasurer" && <TreasurerView />}
+              <p className="text-[7px] text-gold-light/20 uppercase font-bold">Trust</p>
+            </div>
           </motion.div>
-        </AnimatePresence>
-      </main>
+        ))}
+      </div>
+
+      <button className="w-full mt-8 py-4 border border-gold/10 rounded-2xl text-[9px] font-black text-gold/40 uppercase tracking-widest hover:bg-gold/5 hover:text-gold transition-all">
+        View Governance History
+      </button>
     </div>
   );
 }
