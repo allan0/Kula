@@ -1,4 +1,4 @@
-import "./globals.css"; // Make sure there is an 's' at the end
+import "./globals.css";
 import type { Metadata } from "next";
 import { Providers } from "./providers";
 import SplashLoader from "@/components/SplashLoader";
@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased overflow-x-hidden bg-[#0F0F0F]">
+      <body className="antialiased bg-[#0F0F0F] selection:bg-[#D4AF37] selection:text-[#0F0F0F]">
         <Providers>
           <SplashLoader />
           {children}

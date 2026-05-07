@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
-import { WagmiProvider, createConfig, http } from 'wagmi';
+import { WagmiProvider, http } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rainbowkit';
@@ -10,28 +10,21 @@ import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rai
 // Import CSS for RainbowKit
 import '@rainbow-me/rainbowkit/styles.css';
 
+// Create a stable QueryClient outside the component or via useMemo
+const queryClient = new QueryClient();
+
 export default function Web3Provider({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Use useMemo to ensure config is stable and doesn't trigger re-renders
+  // 1. Setup the RainbowKit/Wagmi Config
+  // useMemo ensures this isn't re-created during build/render cycles
   const config = useMemo(() => getDefaultConfig({
     appName: 'KULA Exclusive',
-    projectId: '04309ed1007e77d1f11709da9793f9b5', // Ensure this is a valid WalletConnect ID
+    projectId: '04309ed1007e77d1f11709da9793f9b5', 
     chains: [baseSepolia],
     transports: {
       [baseSepolia.id]: http(),
     },
-    ssr: true,
+    ssr: true, // Crucial for Next.js
   }), []);
-
-  const queryClient = useMemo(() => new QueryClient(), []);
-
-  // Prevent hydration UI mismatch
-  if (!mounted) return <div style={{ visibility: 'hidden' }}>{children}</div>;
 
   return (
     <PrivyProvider
@@ -42,6 +35,7 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
           theme: 'dark',
           accentColor: '#D4AF37',
           showWalletLoginFirst: false,
+          logo: '/assets/kulalogo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
@@ -59,6 +53,10 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
             })}
             modalSize="compact"
           >
+            {/* 
+              We wrap children directly here. 
+              Components inside will handle their own mounting logic.
+            */}
             {children}
           </RainbowKitProvider>
         </QueryClientProvider>
