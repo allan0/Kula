@@ -4,8 +4,8 @@ import { Providers } from "./providers";
 import SplashLoader from "@/components/SplashLoader";
 
 export const metadata: Metadata = {
-  title: "KULA | Exclusive Rotary Group",
-  description: "Digital trust for high-value assets.",
+  title: "KULA | The Sovereign Vault",
+  description: "Exclusive digital trust for high-value assets.",
 };
 
 export default function RootLayout({
@@ -14,15 +14,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </head>
-      <body className="antialiased bg-[#0F0F0F] selection:bg-[#D4AF37] selection:text-[#0F0F0F]">
+    <html lang="en" className="dark">
+      <body className="antialiased bg-[#0F0F0F] text-[#F3E5AB] selection:bg-[#D4AF37] selection:text-[#0F0F0F] min-h-screen overflow-x-hidden">
         <Providers>
           <SplashLoader />
-          {children}
+          <div className="relative z-0">
+            {children}
+          </div>
         </Providers>
       </body>
     </html>
