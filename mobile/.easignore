@@ -1,0 +1,7 @@
+node_modules
+.expo
+.next
+frontend
+contracts
+ussd-middleware
+package-lock.json
