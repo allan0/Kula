@@ -2,12 +2,15 @@
 
 import dynamic from 'next/dynamic';
 
-// This disables Server-Side Rendering (SSR) for the entire Dashboard
+// Dynamically import the client component to disable SSR (important for wallet providers and animations)
 const DashboardClient = dynamic(() => import('./DashboardClient'), { 
   ssr: false,
   loading: () => (
     <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
-      <div className="w-10 h-10 border-t-2 border-[#D4AF37] rounded-full animate-spin" />
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full animate-spin" />
+        <p className="text-[#D4AF37] text-sm tracking-widest font-mono">LOADING VAULT...</p>
+      </div>
     </div>
   )
 });

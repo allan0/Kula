@@ -1,164 +1,120 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { useAccount } from 'wagmi';
 import Navbar from "@/components/Navbar";
+import MemberDirectory from "@/components/MemberDirectory";
 import GoldParticles from "@/components/GoldParticles";
-import ExclusiveModal from "@/components/ExclusiveModal";
-import { 
-  Landmark, 
-  Car, 
-  Receipt, 
-  Globe, 
-  ShieldCheck, 
-  Users, 
-  Send, 
-  Share2, 
-  ArrowRight,
-  TrendingUp,
-  Smartphone
-} from "lucide-react";
+import { Wallet, ArrowRight } from "lucide-react";
 
-const features = [
-  { icon: <Users />, title: "The Circle", desc: "Traditional ROSCA logic secured by smart contracts. No middleman, just pure code." },
-  { icon: <Landmark />, title: "Real Estate", desc: "Collectively purchase land and property. Deeds are verified and held in digital escrow." },
-  { icon: <Car />, title: "Fleet Growth", desc: "Finance vehicles through group rotation. Logbooks are tokenized for group security." },
-  { icon: <Receipt />, title: "Social Safety", desc: "Vote to settle hospital or school fees for members directly from group yield." },
-  { icon: <Globe />, title: "USSD Access", desc: "Access the vault from any feature phone. No internet required for core savings." },
-  { icon: <ShieldCheck />, title: "Asset Audit", desc: "Every physical asset is verified by legal oracles before group funds release." },
-];
-
-export default function Home() {
-  const [modalType, setModalType] = useState<string | null>(null);
+export default function HomePage() {
   const [mounted, setMounted] = useState(false);
+  const { address, isConnected } = useAccount();
 
-  // Fix hydration and provider errors by waiting for mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Actual Expo EAS download link or generic link
-  const mobileDownloadUrl = "https://expo.dev/artifacts/eas/your-unique-app-link";
-
-  // Prevent server-side rendering of Web3-dependent components
   if (!mounted) {
-    return <div className="min-h-screen bg-[#0F0F0F]" />;
+    return (
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+        <div className="spinner w-12 h-12 border-4 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full" />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F] selection:bg-[#D4AF37] selection:text-[#0F0F0F] overflow-x-hidden">
+    <div className="min-h-screen bg-[#0F0F0F] text-[#F3E5AB] pb-20 overflow-x-hidden tg-safe-area">
       <GoldParticles />
       <Navbar />
-      
-      {/* 1. HERO SECTION */}
-      <section className="relative h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden">
-        <motion.div 
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 1 }}
-          className="z-10"
-        >
-          <div className="flex justify-center mb-6">
-             <span className="px-4 py-1 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/5 text-[9px] text-[#D4AF37] font-black uppercase tracking-[0.3em] animate-pulse">
-                Base L2 Network • Secure Genesis
-             </span>
+
+      <main className="relative z-10 pt-28 px-5 md:px-8 max-w-5xl mx-auto">
+        {/* Hero Header */}
+        <header className="text-center mb-16 pt-8">
+          <div className="inline-flex items-center gap-3 mb-6">
+            <div className="w-3 h-3 bg-[#D4AF37] rounded-full animate-pulse" />
+            <p className="text-[#D4AF37] uppercase font-black text-xs tracking-[0.4em]">EST. 2025 • BASE L2</p>
           </div>
-          <h1 className="text-7xl md:text-9xl font-serif shimmer-text mb-8">KULA</h1>
-          <p className="text-[#F3E5AB]/40 max-w-2xl mx-auto mb-12 text-sm md:text-lg leading-relaxed font-light tracking-wide px-6">
-            The Sovereign Treasury for elite circles. 
-            Transforming collective social trust into real-world legacies.
-          </p>
           
-          <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
-            {/* WEB APP BUTTON */}
-            <motion.a
-              href="/dashboard"
-              whileHover={{ scale: 1.05 }}
-              className="px-12 py-4 bg-[#D4AF37] text-[#0F0F0F] rounded-full font-black tracking-widest text-xs shadow-[0_0_30px_rgba(212,175,55,0.3)] transition-all"
-            >
-              ENTER THE VAULT
-            </motion.a>
+          <h1 className="text-6xl md:text-7xl font-serif tracking-tighter leading-none mb-4">
+            The Kula <span className="shimmer-text">Vault</span>
+          </h1>
+          
+          <p className="text-[#F3E5AB]/70 max-w-md mx-auto text-lg">
+            Sovereign collective wealth.<br />Real assets. Real trust.
+          </p>
 
-            {/* MOBILE DOWNLOAD BUTTON */}
-            <motion.a
-              href={mobileDownloadUrl}
-              target="_blank"
-              whileHover={{ scale: 1.05, backgroundColor: "rgba(212, 175, 55, 0.1)" }}
-              className="px-8 py-4 luxury-border rounded-full flex items-center gap-3 group transition-all"
-            >
-              <Smartphone size={16} className="text-[#D4AF37] group-hover:animate-bounce" />
-              <span className="text-[#D4AF37] font-black tracking-widest text-[10px] uppercase">Download Mobile Vault</span>
-            </motion.a>
-          </div>
+          {isConnected && (
+            <p className="mt-6 text-xs font-mono text-[#D4AF37]/80 flex items-center justify-center gap-2">
+              <Wallet size={14} /> {address?.slice(0, 6)}...{address?.slice(-4)}
+            </p>
+          )}
+        </header>
 
-          <div className="mt-10">
-            <button 
-              onClick={() => setModalType('telegram')}
-              className="text-[#F3E5AB]/40 hover:text-[#D4AF37] transition-colors text-[10px] font-bold tracking-widest uppercase flex items-center gap-2 mx-auto"
-            >
-              Link @KulaBot <ArrowRight size={14} />
-            </button>
-          </div>
-        </motion.div>
-      </section>
+        {/* Main Portfolio Card */}
+        <div className="glass-card rounded-[3rem] p-10 md:p-16 mb-12 border border-[#D4AF37]/20">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-8">
+            <div>
+              <p className="uppercase text-xs tracking-[0.3em] text-[#D4AF37] font-black mb-2">TOTAL GROUP WEALTH</p>
+              <p className="text-6xl md:text-7xl font-serif text-white tracking-tighter">$142,500.00</p>
+              <p className="text-green-500 text-sm mt-3 flex items-center gap-2">
+                +8.42% APY <span className="text-[#D4AF37]/50">• Live on Aave</span>
+              </p>
+            </div>
 
-      {/* 2. FUNCTIONALITY CARDS SECTION */}
-      <section className="relative z-10 py-32 px-6 md:px-20 bg-gradient-to-b from-transparent to-[#0F0F0F]/95">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-20 text-center">
-            <h3 className="gold-text text-[10px] tracking-[0.5em] uppercase mb-4">The Functional Suite</h3>
-            <h2 className="text-4xl md:text-6xl font-serif text-[#F3E5AB]">One Vault. Infinite <span className="italic">Trust.</span></h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((f, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="p-10 glass-card rounded-[3rem] border border-[#D4AF37]/5 group hover:border-[#D4AF37]/30 transition-all cursor-default relative overflow-hidden"
+            <div className="flex flex-col gap-4 w-full md:w-auto">
+              <button 
+                onClick={() => window.scrollTo({ top: 800, behavior: 'smooth' })}
+                className="btn-gold w-full md:w-auto px-10 py-5 rounded-2xl flex items-center justify-center gap-3 text-sm uppercase tracking-widest font-black"
               >
-                <div className="w-14 h-14 bg-[#D4AF37]/10 rounded-2xl flex items-center justify-center text-[#D4AF37] mb-8 group-hover:scale-110 group-hover:bg-[#D4AF37] group-hover:text-[#0F0F0F] transition-all duration-500">
-                  {f.icon}
-                </div>
-                <h4 className="text-2xl font-serif text-[#F3E5AB] mb-4">{f.title}</h4>
-                <p className="text-[#F3E5AB]/40 text-sm leading-relaxed tracking-tight">
-                  {f.desc}
-                </p>
-                <TrendingUp className="absolute -right-4 -bottom-4 text-[#D4AF37]/5 group-hover:text-[#D4AF37]/10 transition-colors" size={100} />
-              </motion.div>
-            ))}
+                Contribute Now <ArrowRight size={18} />
+              </button>
+              
+              <button className="px-10 py-5 border border-[#D4AF37]/30 hover:border-[#D4AF37] rounded-2xl text-sm uppercase tracking-widest font-bold transition-all">
+                View Full Ledger
+              </button>
+            </div>
           </div>
         </div>
-      </section>
 
-      {/* 3. MODALS */}
-      <ExclusiveModal 
-        isOpen={modalType === 'telegram'} 
-        onClose={() => setModalType(null)} 
-        title="Telegram Intelligence"
-      >
-        <div className="text-center p-10 bg-[#0F0F0F]/40 rounded-[3rem] border border-[#D4AF37]/10">
-          <Send size={56} className="mx-auto text-[#D4AF37] mb-6 opacity-80" />
-          <h4 className="text-2xl font-serif mb-4 text-[#F3E5AB] uppercase tracking-widest">Sync Your Circle</h4>
-          <p className="text-sm mb-8 text-[#F3E5AB]/40 leading-relaxed max-w-sm mx-auto">
-            Link your circle&apos;s Telegram channel to scrape group metadata and build cross-platform reputation scores before treasury releases.
-          </p>
-          <button className="w-full py-5 bg-[#229ED9] text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-[#229ED9]/20 hover:scale-105 transition-transform flex items-center justify-center gap-3">
-            <Share2 size={18} /> Link @KulaAuditBot
+        {/* Quick Stats + Member Directory */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            {/* Asset Preview Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="glass-card rounded-3xl p-8 hover:border-[#D4AF37]/40 transition-all group">
+                <div className="text-[#D4AF37] text-xs uppercase font-black tracking-widest mb-4">CURRENT HOLDING</div>
+                <div className="text-2xl font-serif mb-1">Kitengela 5-Acre Plot</div>
+                <div className="text-3xl gold-text font-bold">$45,000</div>
+                <div className="text-xs text-green-500 mt-6">+200% Appreciation</div>
+              </div>
+
+              <div className="glass-card rounded-3xl p-8 hover:border-[#D4AF37]/40 transition-all group">
+                <div className="text-[#D4AF37] text-xs uppercase font-black tracking-widest mb-4">NEXT PAYOUT</div>
+                <div className="text-2xl font-serif mb-1">March 12th, 2026</div>
+                <div className="text-3xl gold-text font-bold">$18,750</div>
+                <div className="text-xs text-[#F3E5AB]/60 mt-6">To Member #04</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Member Directory Sidebar */}
+          <div className="lg:col-span-1">
+            <MemberDirectory />
+          </div>
+        </div>
+
+        {/* Call to Action for Telegram Mini App users */}
+        <div className="mt-16 text-center">
+          <p className="text-xs uppercase tracking-widest text-[#D4AF37]/60 mb-4">Ready to build generational wealth?</p>
+          <button 
+            className="btn-gold px-16 py-6 rounded-3xl text-base font-black tracking-widest shadow-xl shadow-[#D4AF37]/20"
+            onClick={() => alert("Opening Create Group Wizard...")}
+          >
+            INITIALIZE YOUR CIRCLE
           </button>
         </div>
-      </ExclusiveModal>
-
-      {/* 4. FOOTER */}
-      <footer className="py-20 text-center border-t border-[#D4AF37]/5 bg-[#0F0F0F]/50">
-        <div className="flex justify-center mb-6 opacity-30 grayscale brightness-200">
-            <div className="w-10 h-10 rounded-full border border-[#D4AF37] flex items-center justify-center text-[#D4AF37] font-serif italic text-xl">K</div>
-        </div>
-        <p className="text-[#F3E5AB]/20 text-[10px] tracking-[0.6em] uppercase">Digitized Trust • Sovereign Wealth • 2026</p>
-      </footer>
+      </main>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
+
 import { motion } from "framer-motion";
-import { MapPin, ShieldCheck, TrendingUp } from "lucide-react";
+import { MapPin, ShieldCheck, TrendingUp, ArrowUpRight } from "lucide-react";
 
 interface AssetProps {
   type: string;
@@ -9,51 +10,79 @@ interface AssetProps {
   price: string;
   image: string;
   votes: number;
+  status?: "Certified" | "Pending";
 }
 
-export default function MarketplaceCard({ type, title, location, price, image, votes }: AssetProps) {
+export default function MarketplaceCard({ 
+  type, 
+  title, 
+  location, 
+  price, 
+  image, 
+  votes,
+  status = "Certified" 
+}: AssetProps) {
+  const progress = Math.min((votes / 25) * 100, 100);
+
   return (
     <motion.div 
-      whileHover={{ y: -10 }}
-      className="glass-card rounded-3xl overflow-hidden border border-gold/10 group"
+      whileHover={{ y: -12, transition: { duration: 0.4 } }}
+      className="glass-card rounded-3xl overflow-hidden border border-[#D4AF37]/10 group cursor-pointer h-full flex flex-col"
     >
-      <div className="relative h-48 overflow-hidden">
-        <img src={image} alt={title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-        <div className="absolute top-4 left-4 px-3 py-1 bg-earth-dark/80 backdrop-blur-md rounded-full border border-gold/30 text-[10px] text-gold tracking-widest uppercase">
+      {/* Image Section */}
+      <div className="relative h-56 overflow-hidden">
+        <img 
+          src={image} 
+          alt={title} 
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+        />
+        
+        <div className="absolute top-4 left-4 px-4 py-1.5 bg-black/70 backdrop-blur-md rounded-2xl border border-[#D4AF37]/30 text-xs font-black tracking-widest uppercase">
           {type}
         </div>
+
+        {status === "Certified" && (
+          <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-green-500/90 text-black text-[10px] font-black px-3 py-1 rounded-2xl">
+            <ShieldCheck size={14} /> CERTIFIED
+          </div>
+        )}
       </div>
 
-      <div className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="text-xl font-serif text-gold-light mb-1">{title}</h3>
-            <div className="flex items-center gap-1 text-gold-light/40 text-xs">
-              <MapPin size={12} /> {location}
-            </div>
+      {/* Content */}
+      <div className="p-8 flex-1 flex flex-col">
+        <div className="flex-1">
+          <h3 className="text-2xl font-serif text-white mb-3 leading-tight">{title}</h3>
+          
+          <div className="flex items-center gap-2 text-[#F3E5AB]/70 text-sm mb-6">
+            <MapPin size={16} />
+            <span>{location}</span>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gold-light/40 uppercase">Target Pot</p>
-            <p className="gold-text text-lg">{price}</p>
+
+          <div className="mb-8">
+            <p className="text-xs uppercase tracking-widest text-[#D4AF37]/70 mb-1">TARGET POT</p>
+            <p className="text-4xl font-serif gold-text tracking-tighter">{price}</p>
           </div>
         </div>
 
+        {/* Voting Progress */}
         <div className="space-y-4">
-          <div className="w-full bg-earth-dark/50 rounded-full h-1.5 overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${(votes / 20) * 100}%` }}
-              className="h-full bg-gold"
-            />
-          </div>
-          
-          <div className="flex justify-between items-center text-[10px] text-gold-light/40 tracking-widest uppercase">
-            <span>{votes} / 20 Votes</span>
-            <span className="flex items-center gap-1 text-gold"><ShieldCheck size={10} /> Verified Deed</span>
+          <div>
+            <div className="flex justify-between text-xs mb-2 text-[#F3E5AB]/60">
+              <span>COMMUNITY SUPPORT</span>
+              <span className="font-mono">{votes}/25</span>
+            </div>
+            <div className="h-1.5 bg-[#D4AF37]/10 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB]"
+              />
+            </div>
           </div>
 
-          <button className="w-full py-3 bg-gold/10 hover:bg-gold hover:text-earth-dark border border-gold/30 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
-            VOTE TO PURCHASE
+          <button className="w-full py-5 bg-[#D4AF37] hover:bg-white text-black font-black text-sm tracking-widest rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95">
+            VOTE TO ACQUIRE
+            <ArrowUpRight size={18} />
           </button>
         </div>
       </div>

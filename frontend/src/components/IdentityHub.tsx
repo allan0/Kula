@@ -1,4 +1,5 @@
 "use client";
+
 import { usePrivy } from "@privy-io/react-auth";
 import { motion } from "framer-motion";
 import { 
@@ -9,147 +10,166 @@ import {
   UserPlus, 
   CheckCircle2, 
   BarChart3,
-  Users
+  Users,
+  Award
 } from "lucide-react";
 
 export default function IdentityHub() {
-  const { user, linkTelegram, linkLinkedin, linkGoogle } = usePrivy();
+  const { user, linkGoogle, linkLinkedin, linkTelegram } = usePrivy();
 
-  // Logic to calculate Trust Score based on linked accounts
   const calculateTrustScore = () => {
-    let score = 30; // Base score
-    if (user?.google) score += 20;
-    if (user?.linkedin) score += 25;
+    let score = 35; // Base score
+    if (user?.google) score += 22;
+    if (user?.linkedin) score += 28;
     if (user?.telegram) score += 25;
-    return score;
+    return Math.min(score, 100);
   };
+
+  const trustScore = calculateTrustScore();
 
   const socialAccounts = [
     { 
       name: "Google", 
-      icon: <Mail size={18} />, 
+      icon: <Mail size={22} />, 
       action: linkGoogle, 
       linked: !!user?.google,
-      desc: "Gmail Verification" 
+      desc: "Email & Identity Verification",
+      color: "text-blue-400"
     },
     { 
       name: "LinkedIn", 
-      icon: <Linkedin size={18} />, 
+      icon: <Linkedin size={22} />, 
       action: linkLinkedin, 
       linked: !!user?.linkedin,
-      desc: "Professional Audit"
+      desc: "Professional Background",
+      color: "text-[#0A66C2]"
     },
     { 
       name: "Telegram", 
-      icon: <Send size={18} />, 
+      icon: <Send size={22} />, 
       action: linkTelegram, 
       linked: !!user?.telegram,
-      desc: "Social Sync"
+      desc: "Social & Group Alignment",
+      color: "text-[#229ED9]"
     },
   ];
 
   const analyzeTelegram = () => {
-    if (!user?.telegram) return alert("Please connect Telegram first.");
-    alert(`Analyzing @${user.telegram.username}... Found 92% goal alignment with "Real Estate" and "Asset Accumulation" circles.`);
+    if (!user?.telegram) {
+      alert("Please connect Telegram first.");
+      return;
+    }
+    alert(`Analyzing @${user.telegram.username}...\n\nGoal Alignment: HIGH\nCommunity Reputation: Strong\nRecommended Circles: Nairobi Real Estate, Base Builders`);
   };
 
   return (
-    <div className="space-y-8 py-2">
-      {/* 1. TRUST SCORE HEADER */}
-      <div className="relative p-8 luxury-border rounded-[2.5rem] bg-gold/5 overflow-hidden group">
-        <div className="relative z-10 flex justify-between items-center">
+    <div className="space-y-10">
+      {/* Trust Score Header */}
+      <div className="luxury-border rounded-[2.75rem] p-10 bg-gradient-to-br from-[#1B1212] to-black/60">
+        <div className="flex justify-between items-start">
           <div>
-            <p className="text-[10px] text-gold uppercase font-black tracking-[0.3em] mb-1">Vault Trust Rating</p>
-            <h4 className="text-5xl font-serif gold-text">{calculateTrustScore()}%</h4>
+            <p className="uppercase text-xs tracking-[0.4em] text-[#D4AF37] font-black">VAULT INTEGRITY</p>
+            <div className="flex items-baseline gap-4 mt-3">
+              <span className="text-7xl font-serif text-white">{trustScore}</span>
+              <span className="text-3xl text-[#D4AF37]">%</span>
+            </div>
           </div>
-          <div className="text-right">
-            <ShieldCheck size={48} className="text-gold opacity-40 group-hover:opacity-100 transition-opacity" />
-          </div>
+          <ShieldCheck size={72} className="text-[#D4AF37] opacity-30" />
         </div>
-        {/* Animated Progress Bar */}
-        <div className="mt-6 w-full h-1 bg-gold/10 rounded-full overflow-hidden">
+
+        <div className="mt-8 h-2.5 bg-[#D4AF37]/10 rounded-full overflow-hidden">
           <motion.div 
             initial={{ width: 0 }}
-            animate={{ width: `${calculateTrustScore()}%` }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="h-full bg-gold shadow-[0_0_15px_#D4AF37]"
+            animate={{ width: `${trustScore}%` }}
+            className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] rounded-full"
           />
         </div>
       </div>
 
-      {/* 2. SOCIAL VERIFICATION GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {socialAccounts.map((s) => (
-          <button
-            key={s.name}
-            onClick={() => !s.linked && s.action()}
-            className={`p-6 rounded-[2rem] flex flex-col items-center text-center gap-3 transition-all border ${
-              s.linked 
-                ? "border-gold bg-gold/5 shadow-[0_0_20px_rgba(212,175,55,0.1)]" 
-                : "border-gold/10 bg-earth-dark/40 hover:border-gold/30"
+      {/* Social Verification Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {socialAccounts.map((account, index) => (
+          <motion.button
+            key={index}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => !account.linked && account.action?.()}
+            className={`p-8 rounded-3xl border transition-all flex flex-col items-center text-center ${
+              account.linked 
+                ? 'border-[#D4AF37] bg-[#D4AF37]/5' 
+                : 'border-[#D4AF37]/20 hover:border-[#D4AF37]/50'
             }`}
           >
-            <div className={s.linked ? "text-gold" : "text-gold/20"}>{s.icon}</div>
-            <div>
-              <p className={`text-[10px] font-black uppercase tracking-widest ${s.linked ? "text-gold" : "text-gold-light/40"}`}>
-                {s.linked ? "Verified" : s.name}
-              </p>
-              <p className="text-[8px] text-gold-light/20 uppercase mt-1">{s.desc}</p>
+            <div className={`mb-6 text-4xl ${account.linked ? 'text-[#D4AF37]' : 'text-[#D4AF37]/30'} ${account.color}`}>
+              {account.icon}
             </div>
-            {s.linked && <CheckCircle2 size={12} className="text-gold mt-1" />}
-          </button>
+            
+            <p className="font-bold text-lg mb-1">{account.name}</p>
+            <p className="text-xs text-[#F3E5AB]/60 mb-6">{account.desc}</p>
+
+            {account.linked ? (
+              <div className="flex items-center gap-2 text-green-500 text-sm font-bold">
+                <CheckCircle2 size={18} /> VERIFIED
+              </div>
+            ) : (
+              <span className="text-xs uppercase tracking-widest border border-[#D4AF37]/30 px-6 py-2 rounded-full">Connect</span>
+            )}
+          </motion.button>
         ))}
       </div>
 
-      {/* 3. TELEGRAM INTELLIGENCE PANEL */}
+      {/* Telegram Intelligence */}
       {user?.telegram && (
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-8 glass-card rounded-[2.5rem] border-l-4 border-[#229ED9]"
+          className="glass-card rounded-[2.75rem] p-10 border-l-4 border-[#229ED9]"
         >
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-[#229ED9]/10 rounded-2xl text-[#229ED9]">
-                <Send size={20} />
-              </div>
-              <div>
-                <p className="text-[#229ED9] text-[10px] font-black uppercase tracking-widest">Telegram Identity Sync</p>
-                <h5 className="text-lg font-serif text-gold-light">@{user.telegram.username || "Anonymous"}</h5>
-              </div>
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-4 bg-[#229ED9]/10 rounded-2xl">
+              <Send size={28} className="text-[#229ED9]" />
             </div>
-            <div className="px-3 py-1 bg-gold/10 rounded-full border border-gold/20 text-[8px] text-gold font-bold uppercase">Active</div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="p-4 bg-earth-dark/60 rounded-2xl border border-gold/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Users size={16} className="text-gold-light/40" />
-                <span className="text-xs text-gold-light/60">Connected Channel Activity</span>
-              </div>
-              <button onClick={analyzeTelegram} className="text-[10px] text-gold font-bold border-b border-gold/30 hover:text-gold-light transition-colors">
-                VIEW ANALYTICS
-              </button>
-            </div>
-
-            <div className="p-4 bg-earth-dark/60 rounded-2xl border border-gold/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <BarChart3 size={16} className="text-gold-light/40" />
-                <span className="text-xs text-gold-light/60">ROSCA Goal Alignment</span>
-              </div>
-              <span className="text-[10px] font-black text-gold">HIGH</span>
+            <div>
+              <p className="text-[#229ED9] uppercase text-xs font-black tracking-widest">TELEGRAM SYNC ACTIVE</p>
+              <p className="text-xl font-medium">@{user.telegram.username}</p>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="p-6 bg-black/40 rounded-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <Users className="text-[#D4AF37]" />
+                <span className="uppercase text-xs tracking-widest">Circle Alignment</span>
+              </div>
+              <p className="text-4xl font-serif text-green-400">94%</p>
+            </div>
+            
+            <div className="p-6 bg-black/40 rounded-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <Award className="text-[#D4AF37]" />
+                <span className="uppercase text-xs tracking-widest">Trust Delta</span>
+              </div>
+              <p className="text-4xl font-serif">+28</p>
+            </div>
+          </div>
+
+          <button 
+            onClick={analyzeTelegram}
+            className="mt-8 w-full py-5 border border-[#229ED9]/30 hover:bg-[#229ED9]/10 rounded-2xl text-sm font-black tracking-widest"
+          >
+            RUN DEEP ANALYSIS
+          </button>
         </motion.div>
       )}
 
-      {/* 4. CALL TO ACTION */}
-      <div className="pt-4">
-        <button className="w-full py-5 bg-gold text-earth-dark rounded-[1.5rem] font-black text-xs tracking-[0.3em] uppercase flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(212,175,55,0.2)] hover:scale-[1.02] active:scale-95 transition-all">
-          <UserPlus size={18} /> Invite Inner Circle
+      {/* Final CTA */}
+      <div className="pt-6">
+        <button className="w-full py-6 bg-gradient-to-r from-[#D4AF37] to-[#B8972E] text-black rounded-3xl font-black text-sm tracking-[0.08em] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all">
+          <UserPlus size={20} />
+          INVITE NEW MEMBERS
         </button>
-        <p className="text-center text-[9px] text-gold-light/20 uppercase tracking-widest mt-6">
-          Verified KULA members can unlock higher credit limits & secondary asset markets.
+        <p className="text-center text-[10px] text-[#D4AF37]/40 mt-6 tracking-widest">
+          Higher trust unlocks larger contributions and priority asset access
         </p>
       </div>
     </div>

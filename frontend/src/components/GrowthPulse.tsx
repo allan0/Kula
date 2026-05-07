@@ -1,35 +1,63 @@
 "use client";
+
 import { motion } from "framer-motion";
-import { TrendingUp, ShieldCheck, Activity, Zap } from "lucide-react";
+import { TrendingUp, ShieldCheck, Activity, Zap, ArrowUpRight } from "lucide-react";
 
 export default function GrowthPulse() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* YIELD CARD */}
-      <div className="p-8 glass-card rounded-[2.5rem] border border-gold/20 relative overflow-hidden group">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
+      {/* Live Yield Card */}
+      <div className="glass-card rounded-[2.75rem] p-10 relative overflow-hidden group">
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-4 text-gold">
-            <TrendingUp size={18} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Live Yield Optimization</span>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-green-500/10 rounded-2xl">
+              <TrendingUp size={26} className="text-green-500" />
+            </div>
+            <div>
+              <p className="uppercase text-xs tracking-[0.4em] font-black text-green-500">YIELD ENGINE ACTIVE</p>
+              <p className="text-sm text-[#F3E5AB]/70">Aave V3 + Morpho</p>
+            </div>
           </div>
-          <p className="text-4xl font-serif text-gold-light">8.42% <span className="text-sm text-green-500 font-sans tracking-tighter">APY</span></p>
-          <p className="text-gold-light/40 text-[10px] mt-4 uppercase tracking-widest">Protocol: Aave V3 + Morpho Blue</p>
+
+          <div className="flex items-baseline gap-3">
+            <span className="text-6xl font-serif tracking-tighter text-white">8.42</span>
+            <span className="text-3xl text-green-500 font-light">%</span>
+            <span className="text-sm text-green-500/80 self-end mb-3">APY</span>
+          </div>
+
+          <div className="mt-8 flex items-center gap-2 text-xs uppercase tracking-widest text-green-500">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            COMPOUNDING IN REAL TIME
+          </div>
         </div>
-        <Activity className="absolute -right-4 -bottom-4 text-gold/5 group-hover:text-gold/10 transition-colors" size={120} />
+
+        <Activity 
+          className="absolute -bottom-6 -right-6 text-green-500/10 group-hover:text-green-500/20 transition-colors" 
+          size={180} 
+        />
       </div>
 
-      {/* INSURANCE CARD */}
-      <div className="p-8 luxury-border rounded-[2.5rem] bg-gold/5 flex flex-col justify-between">
+      {/* Insurance Reserve */}
+      <div className="luxury-border rounded-[2.75rem] p-10 bg-gradient-to-br from-[#D4AF37]/5 to-transparent flex flex-col justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-4 text-gold">
-            <ShieldCheck size={18} />
-            <span className="text-[10px] font-black uppercase tracking-widest">Insurance Reserve</span>
+          <div className="flex items-center gap-3 mb-6">
+            <ShieldCheck size={26} className="text-[#D4AF37]" />
+            <p className="uppercase text-xs tracking-[0.4em] font-black text-[#D4AF37]">INSURANCE RESERVE</p>
           </div>
-          <p className="text-4xl font-serif text-gold-light">1,240.00 <span className="text-sm text-gold/60 font-sans">USDC</span></p>
+          
+          <p className="text-6xl font-serif tracking-tighter text-white">1,240.00</p>
+          <p className="text-[#D4AF37] text-xl -mt-2">USDC</p>
         </div>
-        <div className="mt-6 flex items-center gap-2">
-           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-           <p className="text-[9px] text-gold-light/40 uppercase font-bold tracking-widest">Self-Healing Protocol Active</p>
+
+        <div className="mt-10 flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <div className="px-4 py-2 bg-green-500/10 text-green-500 text-xs font-bold rounded-2xl border border-green-500/20">
+              SELF-HEALING
+            </div>
+          </div>
+          <div className="text-xs text-[#F3E5AB]/60 flex items-center gap-1">
+            +42 USDC <ArrowUpRight size={14} /> this week
+          </div>
         </div>
       </div>
     </div>

@@ -1,86 +1,164 @@
 "use client";
+
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Send, Users, Landmark, ShieldAlert, Sparkles } from "lucide-react";
+import { Send, Users, Landmark, ShieldAlert, Sparkles, Hash } from "lucide-react";
 
 const channels = [
-  { id: 'general', label: 'Circle General', icon: <Users size={14} /> },
-  { id: 'assets', label: 'Property Board', icon: <Landmark size={14} /> },
-  { id: 'urgent', label: 'Priority Alerts', icon: <ShieldAlert size={14} /> },
+  { id: 'general', label: 'General', icon: <Users size={16} /> },
+  { id: 'assets', label: 'Asset Board', icon: <Landmark size={16} /> },
+  { id: 'urgent', label: 'Priority', icon: <ShieldAlert size={16} /> },
 ];
 
 const initialMessages = [
-  { id: 1, user: "Treasurer", role: "Elite", msg: "The 5-acre Kitengela deed has been verified by the Kula Oracle. Please review the IPFS hash in the Assets tab.", time: "10:24 AM", type: "system" },
-  { id: 2, user: "Member #04", role: "Contributor", msg: "I've inspected the survey map. Alignment looks perfect for our 2026 goal.", time: "11:05 AM", type: "user" },
-  { id: 3, user: "KulaBot", role: "AI Audit", msg: "New Public Asset posted: 'Mombasa Beach Villa'. Community trust score is rising.", time: "11:45 AM", type: "bot" },
+  { 
+    id: 1, 
+    user: "Treasurer", 
+    role: "Admin", 
+    msg: "The Kitengela deed has been uploaded and is now open for review. IPFS hash in Asset Vault.", 
+    time: "10:24 AM", 
+    type: "system" 
+  },
+  { 
+    id: 2, 
+    user: "Member #04", 
+    role: "Elite", 
+    msg: "Inspected the survey map. Everything looks clean. Ready to vote.", 
+    time: "11:05 AM", 
+    type: "user" 
+  },
+  { 
+    id: 3, 
+    user: "Kula Oracle", 
+    role: "AI", 
+    msg: "New public asset listed: Mombasa Beachfront Villa. Trust score rising rapidly.", 
+    time: "11:45 AM", 
+    type: "bot" 
+  },
 ];
 
 export default function GroupChatWall() {
   const [activeChannel, setActiveChannel] = useState('general');
   const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState(initialMessages);
+
+  const sendMessage = () => {
+    if (!message.trim()) return;
+
+    const newMsg = {
+      id: Date.now(),
+      user: "You",
+      role: "Member",
+      msg: message,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      type: "user"
+    };
+
+    setMessages([...messages, newMsg]);
+    setMessage("");
+
+    // Simulate reply
+    setTimeout(() => {
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        user: "Member #07",
+        role: "Contributor",
+        msg: "Agreed. Strong proposal.",
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: "user"
+      }]);
+    }, 800);
+  };
 
   return (
-    <div className="flex h-[550px] gap-6">
-      {/* 1. CHANNEL SIDEBAR */}
-      <div className="w-48 flex flex-col gap-2 border-r border-gold/10 pr-4">
-        <p className="text-[9px] text-gold/40 uppercase font-black tracking-widest mb-4">Channels</p>
-        {channels.map((ch) => (
-          <button
-            key={ch.id}
-            onClick={() => setActiveChannel(ch.id)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-              activeChannel === ch.id ? 'bg-gold/10 text-gold border border-gold/20' : 'text-gold-light/40 hover:text-gold-light'
-            }`}
-          >
-            {ch.icon}
-            <span className="text-[10px] font-bold uppercase tracking-tighter">{ch.label}</span>
-          </button>
-        ))}
+    <div className="glass-card rounded-[3rem] h-[620px] flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="px-8 py-6 border-b border-[#D4AF37]/10 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-9 h-9 bg-[#D4AF37]/10 rounded-2xl flex items-center justify-center">
+            <Hash className="text-[#D4AF37]" size={20} />
+          </div>
+          <div>
+            <h3 className="font-semibold">Circle Intelligence</h3>
+            <p className="text-xs text-[#F3E5AB]/60">12 members online</p>
+          </div>
+        </div>
+        <Sparkles className="text-[#D4AF37]" size={20} />
       </div>
 
-      {/* 2. CHAT AREA */}
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pr-2">
-          {initialMessages.map((m) => (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              key={m.id} 
-              className={`flex flex-col ${m.user === 'Treasurer' ? 'items-start' : 'items-start'}`}
+      {/* Channels Sidebar */}
+      <div className="flex h-full">
+        <div className="w-56 border-r border-[#D4AF37]/10 p-6 hidden md:flex flex-col">
+          <p className="uppercase text-xs tracking-widest text-[#D4AF37]/50 mb-6">CHANNELS</p>
+          {channels.map((ch) => (
+            <button
+              key={ch.id}
+              onClick={() => setActiveChannel(ch.id)}
+              className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl mb-2 transition-all text-sm ${
+                activeChannel === ch.id 
+                  ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30' 
+                  : 'hover:bg-white/5 text-[#F3E5AB]/70'
+              }`}
             >
-              <div className="flex items-center gap-2 mb-1 ml-2">
-                <span className="text-[8px] font-black text-gold uppercase tracking-widest">{m.user}</span>
-                <span className="text-[8px] px-1.5 py-0.5 rounded bg-gold/5 border border-gold/20 text-gold/60 uppercase">{m.role}</span>
-                <span className="text-[8px] text-gold-light/20">{m.time}</span>
-              </div>
-              <div className={`p-4 rounded-2xl max-w-[90%] border ${
-                m.type === 'system' ? 'bg-gold/5 border-gold/20 italic text-gold-light/80' : 
-                m.type === 'bot' ? 'bg-earth border-gold/10 text-gold-light/60' : 
-                'bg-earth-dark/60 border-gold/5 text-gold-light/60'
-              } text-xs leading-relaxed shadow-lg`}>
-                {m.msg}
-              </div>
-            </motion.div>
+              {ch.icon}
+              <span className="font-medium">{ch.label}</span>
+            </button>
           ))}
         </div>
 
-        {/* 3. INPUT AREA */}
-        <div className="mt-6 relative group">
-          <div className="absolute inset-0 bg-gold/5 blur-xl group-focus-within:bg-gold/10 transition-all rounded-2xl" />
-          <div className="relative flex items-center bg-earth-dark border border-gold/20 rounded-2xl p-2 focus-within:border-gold/50 transition-all">
-            <div className="p-2 text-gold/40">
-              <Sparkles size={16} />
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scroll">
+            {messages.map((m) => (
+              <motion.div 
+                key={m.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex gap-4"
+              >
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-transparent flex-shrink-0 flex items-center justify-center mt-1">
+                  {m.type === 'bot' ? '🤖' : '👤'}
+                </div>
+                
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className="font-semibold text-sm">{m.user}</span>
+                    <span className="text-[10px] px-3 py-0.5 bg-white/5 rounded-full text-[#D4AF37]/70">{m.role}</span>
+                    <span className="text-xs text-[#F3E5AB]/40 font-mono">{m.time}</span>
+                  </div>
+                  
+                  <div className={`text-sm leading-relaxed px-5 py-4 rounded-3xl max-w-[85%] ${
+                    m.type === 'system' 
+                      ? 'bg-[#D4AF37]/10 border border-[#D4AF37]/20 italic' 
+                      : m.type === 'bot' 
+                      ? 'bg-[#1B1212] border border-[#229ED9]/30' 
+                      : 'bg-white/5'
+                  }`}>
+                    {m.msg}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Message Input */}
+          <div className="p-6 border-t border-[#D4AF37]/10">
+            <div className="relative">
+              <input 
+                type="text" 
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Share your thoughts with the circle..." 
+                className="w-full bg-[#1B1212] border border-[#D4AF37]/20 focus:border-[#D4AF37] rounded-3xl py-5 px-8 text-sm outline-none transition-all"
+              />
+              <button 
+                onClick={sendMessage}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-4 bg-[#D4AF37] text-black rounded-2xl hover:scale-110 transition-transform"
+              >
+                <Send size={18} />
+              </button>
             </div>
-            <input 
-              type="text" 
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Contribute to the discussion..." 
-              className="flex-1 bg-transparent border-none outline-none text-gold-light text-xs py-2 px-2"
-            />
-            <button className="p-3 bg-gold text-earth-dark rounded-xl hover:scale-105 transition-transform shadow-lg shadow-gold/20">
-              <Send size={16} />
-            </button>
           </div>
         </div>
       </div>

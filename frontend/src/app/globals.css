@@ -2,67 +2,121 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: #0F0F0F;
-    --foreground: #F3E5AB;
-  }
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap');
 
-  /* Explicit heading styles to fix browser warnings */
-  h1 {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    font-weight: 700;
-  }
-  
-  h2 {
-    font-size: 2rem;
-    margin-bottom: 0.75rem;
-  }
-
-  body {
-    background-color: #0F0F0F;
-    color: #F3E5AB;
-    font-family: 'Times New Roman', serif;
-    margin: 0;
-    padding: 0;
-    -webkit-font-smoothing: antialiased;
-  }
+:root {
+  --gold: #D4AF37;
+  --gold-light: #F3E5AB;
+  --earth-dark: #0F0F0F;
+  --earth: #1B1212;
 }
 
-@layer components {
-  .glass-card {
-    background: rgba(62, 39, 35, 0.2);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(212, 175, 55, 0.1);
-  }
+body {
+  font-family: 'Inter', system_ui, sans-serif;
+}
 
-  .gold-text {
-    background: linear-gradient(to right, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
+.font-serif {
+  font-family: 'Playfair Display', serif;
+}
 
-  .shimmer-text {
-    background: linear-gradient(
-      to right,
-      #996515 20%, #D4AF37 40%, #FCF6BA 50%, #D4AF37 60%, #996515 80%
-    );
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: shine 4s linear infinite;
-  }
+/* Luxury Glass Effect */
+.glass-card {
+  background: rgba(27, 18, 18, 0.75);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
 
-  @keyframes shine {
-    to { background-position: 200% center; }
-  }
+.luxury-border {
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  position: relative;
+}
 
-  .luxury-border {
-    border: 1px solid rgba(212, 175, 55, 0.3);
-    background: linear-gradient(145deg, rgba(62, 39, 35, 0.1), rgba(27, 18, 18, 0.3));
-  }
+.luxury-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Shimmer Text */
+.shimmer-text {
+  background: linear-gradient(90deg, #D4AF37, #F3E5AB, #D4AF37);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 100%;
+  animation: shimmer 4s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Gold Text */
+.gold-text {
+  color: #D4AF37;
+}
+
+.text-gold-light {
+  color: #F3E5AB;
+}
+
+/* Scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Telegram Mini App Optimizations */
+.tg-safe-area {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Button Styles */
+.btn-gold {
+  background: linear-gradient(145deg, #D4AF37, #B8972E);
+  color: #0F0F0F;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(212, 175, 55, 0.3),
+              0 8px 10px -6px rgba(212, 175, 55, 0.3);
+}
+
+.btn-gold:active {
+  transform: scale(0.98);
+}
+
+/* Card Hover Effects */
+.glass-card:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 20px 40px rgba(212, 175, 55, 0.15);
+}
+
+/* Loading Spinner */
+.spinner {
+  border: 3px solid rgba(212, 175, 55, 0.2);
+  border-top-color: #D4AF37;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Utility for Telegram Mini App */
+.tg-bottom-safe {
+  padding-bottom: 80px; /* Extra space for Telegram bottom bar */
 }

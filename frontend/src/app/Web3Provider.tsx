@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { WagmiProvider, http } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
@@ -9,19 +9,45 @@ import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rai
 
 import '@rainbow-me/rainbowkit/styles.css';
 
-// 1. STABLE CONFIG: Move this OUTSIDE to prevent "undefined to object" errors
-const stableQueryClient = new QueryClient();
+// Stable Query Client
+const stableQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      refetchOnWindowFocus: false,
+      staleTime: 60_000,
+    },
+  },
+});
 
-// NOTE: Your ID 04309ed1007e77d1f11709da9793f9b5 is failing. 
-// I've added a fallback check. If the modal doesn't open, replace this ID.
-const walletConnectProjectId = '04309ed1007e77d1f11709da9793f9b5';
+const walletConnectProjectId = '04309ed1007e77d1f11709da9793f9b5'; // Replace if needed
 
 export default function Web3Provider({ children }: { children: React.ReactNode }) {
+  
+  // Telegram Mini App Initialization
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+      
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor('#0F0F0F');
+      tg.setBackgroundColor('#0F0F0F');
+      
+      // Enable back button if needed
+      // tg.BackButton.show();
+      
+      console.log("✅ Telegram WebApp initialized");
+    }
+  }, []);
+
   const config = useMemo(() => getDefaultConfig({
-    appName: 'KULA Exclusive',
-    projectId: walletConnectProjectId, 
+    appName: 'KULA Sovereign Vault',
+    projectId: walletConnectProjectId,
     chains: [baseSepolia],
-    transports: { [baseSepolia.id]: http() },
+    transports: { 
+      [baseSepolia.id]: http() 
+    },
     ssr: true,
   }), []);
 
@@ -29,11 +55,12 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
     <PrivyProvider
       appId="cmmasahmx00r80cl5atptvs1u"
       config={{
-        loginMethods: ['email', 'google', 'telegram'],
+        loginMethods: ['email', 'google', 'telegram', 'wallet'],
         appearance: {
           theme: 'dark',
           accentColor: '#D4AF37',
           showWalletLoginFirst: false,
+          logo: '/assets/kulalogo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
@@ -45,10 +72,12 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
         <QueryClientProvider client={stableQueryClient}>
           <RainbowKitProvider 
             theme={darkTheme({
-              accentColor: '#D4AF37', 
-              accentColorForeground: '#1B1212',
+              accentColor: '#D4AF37',
+              accentColorForeground: '#0F0F0F',
               borderRadius: 'large',
+              fontStack: 'system',
             })}
+            modalSize="compact"
           >
             {children}
           </RainbowKitProvider>

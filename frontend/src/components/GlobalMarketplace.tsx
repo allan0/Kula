@@ -1,91 +1,106 @@
 "use client";
+
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Users, ArrowUpRight, BarChart3, Sparkles, Gem } from "lucide-react";
+import { ShieldCheck, ArrowUpRight, Sparkles, Gem, MapPin } from "lucide-react";
 
 const publicAssets = [
-  { id: 101, title: "Nanyuki 10-Acre Ranch", price: "85,000 USDC", votes: 142, status: "Certified", minted: false },
-  { id: 102, title: "Vintage Porsche 911", price: "120,000 USDC", votes: 45, status: "Pending", minted: false },
-  { id: 103, title: "Commercial Space - CBD", price: "250,000 USDC", votes: 310, status: "Certified", minted: true },
+  { 
+    id: 101, 
+    title: "Nanyuki 10-Acre Ranch", 
+    price: "85,000 USDC", 
+    votes: 142, 
+    status: "Certified", 
+    minted: false,
+    location: "Laikipia, Kenya"
+  },
+  { 
+    id: 102, 
+    title: "Vintage Porsche 911 Carrera", 
+    price: "120,000 USDC", 
+    votes: 45, 
+    status: "Pending", 
+    minted: false,
+    location: "Nairobi, Kenya"
+  },
+  { 
+    id: 103, 
+    title: "Prime CBD Commercial Space", 
+    price: "250,000 USDC", 
+    votes: 310, 
+    status: "Certified", 
+    minted: true,
+    location: "Nairobi CBD"
+  },
 ];
 
 export default function GlobalMarketplace() {
-  const [isMinting, setIsMinting] = useState(false);
+  const [isMinting, setIsMinting] = useState<number | null>(null);
 
-  const handleMint = () => {
-    setIsMinting(true);
+  const handleMint = (id: number) => {
+    setIsMinting(id);
     setTimeout(() => {
-      setIsMinting(false);
-      alert("Success! Your Asset has been Tokenized as a KULA-RWA NFT.");
-    }, 3000);
+      setIsMinting(null);
+      alert(`✅ Trust Equity NFT #${id} minted successfully!`);
+    }, 2600);
   };
 
   return (
-    <div className="space-y-10">
-      <div className="flex justify-between items-center">
+    <div className="space-y-12">
+      <header className="flex justify-between items-end">
         <div>
-          <h3 className="text-3xl font-serif gold-text uppercase tracking-widest">Global Asset Registry</h3>
-          <p className="text-gold-light/40 text-xs mt-2 uppercase tracking-tighter">Community-Verified Wealth for the Kula Treasury</p>
+          <h3 className="text-4xl font-serif gold-text">Global Asset Registry</h3>
+          <p className="text-[#F3E5AB]/60">Community Certified • On-chain Real World Assets</p>
         </div>
-      </div>
+        <div className="text-xs px-5 py-2 border border-[#D4AF37]/30 rounded-full font-mono tracking-widest">BASE SEPOLIA</div>
+      </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {publicAssets.map((asset) => (
           <motion.div 
             key={asset.id}
             whileHover={{ y: -10 }}
-            className={`p-8 glass-card rounded-[2.5rem] border flex flex-col justify-between min-h-[350px] transition-all duration-500 ${
-              asset.minted ? 'border-gold shadow-[0_0_40px_rgba(212,175,55,0.15)]' : 'border-gold/10'
+            className={`glass-card rounded-[2.75rem] p-8 flex flex-col transition-all group ${
+              asset.minted ? 'border-[#D4AF37] shadow-xl shadow-[#D4AF37]/20' : 'border-[#D4AF37]/10 hover:border-[#D4AF37]/40'
             }`}
           >
-            <div>
-              <div className="flex justify-between items-start mb-6">
-                <span className="text-[9px] text-gold/50 font-black uppercase tracking-widest">Vault ID: {asset.id}</span>
-                {asset.minted ? (
-                  <div className="flex items-center gap-2 text-gold animate-pulse">
-                    <Gem size={14} />
-                    <span className="text-[8px] font-black uppercase tracking-widest">RWA Tokenized</span>
-                  </div>
-                ) : asset.status === "Certified" && (
-                  <div className="flex items-center gap-1 text-green-500 bg-green-500/10 px-2 py-1 rounded-full text-[8px] font-bold uppercase border border-green-500/20">
-                    <ShieldCheck size={10} /> Certified
-                  </div>
-                )}
+            <div className="relative h-52 bg-gradient-to-br from-[#1B1212] to-black rounded-3xl mb-8 flex items-center justify-center overflow-hidden">
+              <div className="text-[180px] font-serif text-[#D4AF37]/5 absolute">K</div>
+              <div className="absolute top-6 left-6 text-xs uppercase tracking-widest bg-black/70 px-4 py-2 rounded-2xl border border-[#D4AF37]/30">
+                {asset.location}
               </div>
-              <h4 className="text-3xl font-serif text-gold-light mb-2">{asset.title}</h4>
-              <p className="text-xl gold-text font-bold tracking-tight">{asset.price}</p>
             </div>
 
-            <div className="mt-10 space-y-6">
-              <div>
-                <div className="flex justify-between text-[9px] uppercase font-bold text-gold-light/30 mb-2 tracking-widest">
-                  <span>Community Verification</span>
-                  <span>{asset.votes}/50 Votes</span>
-                </div>
-                <div className="w-full h-1 bg-gold/5 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((asset.votes/50)*100, 100)}%` }}
-                    className={`h-full ${asset.status === 'Certified' ? 'bg-gold shadow-[0_0_15px_#D4AF37]' : 'bg-gold-dark'}`}
-                  />
-                </div>
+            <h4 className="text-2xl font-serif text-white mb-3">{asset.title}</h4>
+            <p className="text-4xl font-serif gold-text mb-8">{asset.price}</p>
+
+            <div className="mt-auto">
+              <div className="flex justify-between text-xs mb-3 text-[#F3E5AB]/60">
+                <span>COMMUNITY VERIFICATION</span>
+                <span>{asset.votes}/50</span>
+              </div>
+              <div className="h-1.5 bg-[#D4AF37]/10 rounded-full mb-8 overflow-hidden">
+                <motion.div 
+                  animate={{ width: `${Math.min((asset.votes / 50) * 100, 100)}%` }}
+                  className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB]"
+                />
               </div>
 
-              {/* ACTION BUTTON: Dynamic based on status */}
               {asset.minted ? (
-                <button className="w-full py-4 bg-gold text-earth-dark rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
-                  View On BaseScan <ArrowUpRight size={14} />
+                <button className="w-full py-5 border border-[#D4AF37] text-[#D4AF37] rounded-2xl font-black tracking-widest flex items-center justify-center gap-2 hover:bg-[#D4AF37] hover:text-black transition-all">
+                  VIEW ON BASESCAN <ArrowUpRight size={18} />
                 </button>
               ) : asset.status === "Certified" ? (
                 <button 
-                  onClick={handleMint}
-                  className="w-full py-4 shimmer-text border border-gold rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gold hover:text-earth-dark transition-all"
+                  onClick={() => handleMint(asset.id)}
+                  disabled={isMinting !== null}
+                  className="w-full py-5 bg-[#D4AF37] text-black rounded-2xl font-black tracking-widest flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-70"
                 >
-                  {isMinting ? "Generating NFT..." : "Mint Trust Equity"} <Sparkles size={14} />
+                  {isMinting === asset.id ? "MINTING..." : "MINT TRUST EQUITY NFT"} <Sparkles size={18} />
                 </button>
               ) : (
-                <button className="w-full py-4 bg-gold/5 border border-gold/20 rounded-2xl text-[10px] font-black text-gold uppercase tracking-widest hover:bg-gold/10 transition-all">
-                  Verify Asset
+                <button className="w-full py-5 border border-[#D4AF37]/30 text-[#D4AF37] rounded-2xl font-black tracking-widest">
+                  VOTE TO CERTIFY
                 </button>
               )}
             </div>
@@ -93,20 +108,19 @@ export default function GlobalMarketplace() {
         ))}
       </div>
 
-      {/* Minting Overlay Animation */}
+      {/* Global Minting Overlay */}
       <AnimatePresence>
         {isMinting && (
           <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-earth-dark/90 backdrop-blur-xl"
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 backdrop-blur-2xl"
           >
             <div className="text-center">
-              <motion.div 
-                animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="w-24 h-24 border-t-2 border-b-2 border-gold rounded-full mx-auto mb-8 shadow-[0_0_30px_rgba(212,175,55,0.3)]"
-              />
-              <h2 className="text-3xl font-serif shimmer-text mb-2">Tokenizing Property</h2>
-              <p className="text-gold-light/40 text-[10px] uppercase tracking-[0.4em]">Securing Deed into KULA Registry...</p>
+              <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2.5 }} className="w-20 h-20 border-4 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full mx-auto mb-8" />
+              <h2 className="text-4xl font-serif shimmer-text">Minting Trust Equity</h2>
+              <p className="text-[#F3E5AB]/60 mt-3">Securing fractional ownership on-chain...</p>
             </div>
           </motion.div>
         )}
