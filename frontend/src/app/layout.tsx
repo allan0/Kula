@@ -15,6 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
       <body className="antialiased bg-[#0F0F0F] selection:bg-[#D4AF37] selection:text-[#0F0F0F]">
         <Providers>
           <SplashLoader />

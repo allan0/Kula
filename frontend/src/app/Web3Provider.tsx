@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
-import { WagmiProvider, http } from 'wagmi';
+import { WagmiProvider, createConfig, http } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rainbowkit';
@@ -10,32 +10,40 @@ import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rai
 // Import CSS for RainbowKit
 import '@rainbow-me/rainbowkit/styles.css';
 
-// Create a stable QueryClient outside the component or via useMemo
+// 1. Create a SINGLETON config outside the component to prevent re-initialization crashes
+const config = getDefaultConfig({
+  appName: 'KULA Exclusive',
+  // Note: Your Project ID 04309ed1007e77d1f11709da9793f9b5 is returning 401. 
+  // Ensure this is created at cloud.walletconnect.com
+  projectId: '04309ed1007e77d1f11709da9793f9b5', 
+  chains: [baseSepolia],
+  transports: {
+    [baseSepolia.id]: http(),
+  },
+  ssr: true,
+});
+
 const queryClient = new QueryClient();
 
 export default function Web3Provider({ children }: { children: React.ReactNode }) {
-  // 1. Setup the RainbowKit/Wagmi Config
-  // useMemo ensures this isn't re-created during build/render cycles
-  const config = useMemo(() => getDefaultConfig({
-    appName: 'KULA Exclusive',
-    projectId: '04309ed1007e77d1f11709da9793f9b5', 
-    chains: [baseSepolia],
-    transports: {
-      [baseSepolia.id]: http(),
-    },
-    ssr: true, // Crucial for Next.js
-  }), []);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Return a fragment during server-side rendering to maintain tree structure
+  if (!mounted) return <>{children}</>;
 
   return (
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmmasahmx00r80cl5atptvs1u"}
       config={{
-        loginMethods: ['email', 'google', 'farcaster', 'telegram'],
+        loginMethods: ['email', 'google', 'telegram'],
         appearance: {
           theme: 'dark',
           accentColor: '#D4AF37',
           showWalletLoginFirst: false,
-          logo: '/assets/kulalogo.png',
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
@@ -53,10 +61,6 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
             })}
             modalSize="compact"
           >
-            {/* 
-              We wrap children directly here. 
-              Components inside will handle their own mounting logic.
-            */}
             {children}
           </RainbowKitProvider>
         </QueryClientProvider>
