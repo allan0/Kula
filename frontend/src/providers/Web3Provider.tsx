@@ -195,7 +195,7 @@ async function registerWithBackend(
 export default function Web3Provider({ children }: { children: ReactNode }) {
   return (
     <PrivyProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
+      appId="cmmasahmx00r80cl5atptvs1u"
       config={{
         appearance: {
           theme: "dark",
