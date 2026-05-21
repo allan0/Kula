@@ -1,98 +1,73 @@
-// =============================================================================
-// FILE: mobile/src/components/MemberDirectory.tsx
-// PURPOSE: Phase 5 – React Native conversion of the web MemberDirectory
-//
-// CHANGES FROM WEB VERSION:
-//   - All <div> → <View>
-//   - All <span> / <p> / <h*> → <Text>
-//   - All <img> → <Image> (expo-image for caching)
-//   - All <button> → <TouchableOpacity> / <Pressable>
-//   - All <a> → <Pressable> + Linking.openURL
-//   - CSS className strings → NativeWind v4 className (uses Tailwind syntax)
-//   - Hover/active states → NativeWind's active: / pressed: variants
-//   - motion.div animations → react-native Animated or moti (Framer Motion RN)
-//   - Scrollable list → <FlatList> for performance on large member sets
-//   - No window.* or document.* calls
-//
-// DEPENDENCIES (add to mobile/package.json):
-//   "nativewind": "^4.x"
-//   "moti": "^0.x"          (Framer Motion for React Native)
-//   "expo-image": "~2.x"    (cached image loading)
-//   "@expo/vector-icons": "^14.x"
-// =============================================================================
+// FILE: frontend/src/components/MemberDirectory.tsx
+// PURPOSE: Web/TMA version of the Member Directory.
+// Uses Framer Motion, lucide-react, and standard HTML/Tailwind.
 
-import React, { useState, useCallback } from "react";
-import {
-    View,
-    Text,
-    FlatList,
-    TouchableOpacity,
-    Linking,
-    TextInput,
-    ListRenderItemInfo,
-} from "react-native";
-import { Image } from "expo-image";
-import { MotiView } from "moti";
-import { Feather } from "@expo/vector-icons";
+"use client";
+
+import React, { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Globe, Send, Phone, User, X } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // TYPES
 // ---------------------------------------------------------------------------
 
+export type PlatformType = "ALL" | "USSD" | "WEB" | "TELEGRAM";
+
 export interface Member {
-    id:             string;
-    displayName:    string;
-    shortAddress:   string;
-    fullAddress:    string;
-    reputationScore: number;
-    reputationTier: "Elite" | "Trusted" | "Active" | "New" | "Probation";
-    platform:       "USSD" | "WEB" | "TELEGRAM";
-    avatarUri?:     string;
-    isCurrentRecipient?: boolean;
+  id: string;
+  displayName: string;
+  shortAddress: string;
+  fullAddress: string;
+  reputationScore: number;
+  reputationTier: "Elite" | "Trusted" | "Active" | "New" | "Probation";
+  platform: "USSD" | "WEB" | "TELEGRAM";
+  avatarUri?: string;
+  isCurrentRecipient?: boolean;
 }
 
 // ---------------------------------------------------------------------------
-// MOCK DATA (replace with real API fetch in production)
+// MOCK DATA (Replace with wagmi/backend fetches later)
 // ---------------------------------------------------------------------------
 
 const MOCK_MEMBERS: Member[] = [
-    {
-        id:             "1",
-        displayName:    "Wanjiku M.",
-        shortAddress:   "0xA1B2...3C4D",
-        fullAddress:    "0xA1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2",
-        reputationScore: 94,
-        reputationTier: "Elite",
-        platform:       "TELEGRAM",
-        isCurrentRecipient: true,
-    },
-    {
-        id:             "2",
-        displayName:    "Kamau T.",
-        shortAddress:   "0xD5E6...7F8A",
-        fullAddress:    "0xD5E67F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4",
-        reputationScore: 81,
-        reputationTier: "Trusted",
-        platform:       "WEB",
-    },
-    {
-        id:             "3",
-        displayName:    "+254712345678",
-        shortAddress:   "0x9B0C...1D2E",
-        fullAddress:    "0x9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4E5F6A7B8",
-        reputationScore: 63,
-        reputationTier: "Active",
-        platform:       "USSD",
-    },
-    {
-        id:             "4",
-        displayName:    "Achieng O.",
-        shortAddress:   "0x3F4A...5B6C",
-        fullAddress:    "0x3F4A5B6C7D8E9F0A1B2C3D4E5F6A7B8C9D0E1F2",
-        reputationScore: 50,
-        reputationTier: "New",
-        platform:       "WEB",
-    },
+  {
+    id: "1",
+    displayName: "Wanjiku M.",
+    shortAddress: "0xA1B2...3C4D",
+    fullAddress: "0xA1B2C3D4E5F6A1B2C3D4E5F6A1B2C3D4E5F6A1B2",
+    reputationScore: 94,
+    reputationTier: "Elite",
+    platform: "TELEGRAM",
+    isCurrentRecipient: true,
+  },
+  {
+    id: "2",
+    displayName: "Kamau T.",
+    shortAddress: "0xD5E6...7F8A",
+    fullAddress: "0xD5E67F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4",
+    reputationScore: 81,
+    reputationTier: "Trusted",
+    platform: "WEB",
+  },
+  {
+    id: "3",
+    displayName: "+254712345678",
+    shortAddress: "0x9B0C...1D2E",
+    fullAddress: "0x9B0C1D2E3F4A5B6C7D8E9F0A1B2C3D4E5F6A7B8",
+    reputationScore: 63,
+    reputationTier: "Active",
+    platform: "USSD",
+  },
+  {
+    id: "4",
+    displayName: "Achieng O.",
+    shortAddress: "0x3F4A...5B6C",
+    fullAddress: "0x3F4A5B6C7D8E9F0A1B2C3D4E5F6A7B8C9D0E1F2",
+    reputationScore: 50,
+    reputationTier: "New",
+    platform: "WEB",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -100,250 +75,203 @@ const MOCK_MEMBERS: Member[] = [
 // ---------------------------------------------------------------------------
 
 function getPlatformIcon(platform: Member["platform"]) {
-    switch (platform) {
-        case "TELEGRAM": return { name: "send" as const, color: "#229ED9" };
-        case "USSD":     return { name: "phone" as const, color: "#22C55E" };
-        case "WEB":      return { name: "globe" as const, color: "#D4AF37" };
-    }
+  switch (platform) {
+    case "TELEGRAM": return <Send size={14} className="text-[#229ED9]" />;
+    case "USSD":     return <Phone size={14} className="text-green-500" />;
+    case "WEB":      return <Globe size={14} className="text-[#D4AF37]" />;
+  }
 }
 
 function getTierColor(tier: Member["reputationTier"]): string {
-    switch (tier) {
-        case "Elite":     return "text-yellow-400";
-        case "Trusted":   return "text-green-400";
-        case "Active":    return "text-blue-400";
-        case "New":       return "text-zinc-400";
-        case "Probation": return "text-red-400";
-        default:          return "text-zinc-400";
-    }
+  switch (tier) {
+    case "Elite":     return "text-yellow-400";
+    case "Trusted":   return "text-green-400";
+    case "Active":    return "text-blue-400";
+    case "New":       return "text-zinc-400";
+    case "Probation": return "text-red-400";
+    default:          return "text-zinc-400";
+  }
 }
 
 function getScoreBarColor(score: number): string {
-    if (score >= 80) return "bg-green-500";
-    if (score >= 60) return "bg-yellow-400";
-    if (score >= 40) return "bg-orange-400";
-    return "bg-red-500";
+  if (score >= 80) return "bg-green-500";
+  if (score >= 60) return "bg-yellow-400";
+  if (score >= 40) return "bg-orange-400";
+  return "bg-red-500";
 }
 
 // ---------------------------------------------------------------------------
-// SUB-COMPONENT: Member Row
-// ---------------------------------------------------------------------------
-
-function MemberRow({ item, index }: { item: Member; index: number }) {
-    const platformIcon = getPlatformIcon(item.platform);
-    const tierClass    = getTierColor(item.reputationTier);
-
-    const openExplorer = useCallback(() => {
-        Linking.openURL(`https://sepolia.basescan.org/address/${item.fullAddress}`);
-    }, [item.fullAddress]);
-
-    return (
-        <MotiView
-            from={{ opacity: 0, translateY: 10 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 300, delay: index * 60 }}
-            className="flex-row items-center px-4 py-4 border-b border-yellow-400/10"
-        >
-            {/* Avatar / Initial */}
-            <View className="w-11 h-11 rounded-2xl bg-yellow-400/10 items-center justify-center mr-4 flex-shrink-0 overflow-hidden">
-                {item.avatarUri ? (
-                    <Image
-                        source={{ uri: item.avatarUri }}
-                        style={{ width: 44, height: 44, borderRadius: 14 }}
-                        contentFit="cover"
-                    />
-                ) : (
-                    <Text className="text-yellow-400 font-bold text-base">
-                        {item.displayName.charAt(0).toUpperCase()}
-                    </Text>
-                )}
-
-                {item.isCurrentRecipient && (
-                    <View className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full items-center justify-center">
-                        <Text className="text-black text-[8px] font-black">★</Text>
-                    </View>
-                )}
-            </View>
-
-            {/* Info */}
-            <View className="flex-1 min-w-0">
-                <View className="flex-row items-center gap-2">
-                    <Text
-                        className="text-white font-semibold text-sm"
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                    >
-                        {item.displayName}
-                    </Text>
-
-                    {item.isCurrentRecipient && (
-                        <View className="px-2 py-0.5 bg-yellow-400/15 rounded-full border border-yellow-400/30">
-                            <Text className="text-yellow-400 text-[10px] font-black tracking-wider">NEXT PAYOUT</Text>
-                        </View>
-                    )}
-                </View>
-
-                {/* Address + explorer link */}
-                <TouchableOpacity onPress={openExplorer} activeOpacity={0.6}>
-                    <Text className="text-zinc-500 font-mono text-xs mt-0.5">
-                        {item.shortAddress}
-                    </Text>
-                </TouchableOpacity>
-
-                {/* Reputation bar */}
-                <View className="flex-row items-center gap-2 mt-2">
-                    <View className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <View
-                            className={`h-full rounded-full ${getScoreBarColor(item.reputationScore)}`}
-                            style={{ width: `${item.reputationScore}%` }}
-                        />
-                    </View>
-                    <Text className={`text-xs font-bold w-8 text-right ${tierClass}`}>
-                        {item.reputationScore}
-                    </Text>
-                </View>
-            </View>
-
-            {/* Right side: Platform + tier */}
-            <View className="items-end ml-3 gap-1">
-                <Feather
-                    name={platformIcon.name}
-                    size={14}
-                    color={platformIcon.color}
-                />
-                <Text className={`text-[10px] font-black uppercase tracking-wider ${tierClass}`}>
-                    {item.reputationTier}
-                </Text>
-            </View>
-        </MotiView>
-    );
-}
-
-// ---------------------------------------------------------------------------
-// MAIN COMPONENT: MemberDirectory
+// MAIN COMPONENT
 // ---------------------------------------------------------------------------
 
 export default function MemberDirectory() {
-    const [searchQuery, setSearchQuery] = useState("");
-    const [filter,      setFilter]      = useState<"ALL" | "USSD" | "WEB" | "TELEGRAM">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState<PlatformType>("ALL");
 
-    const filtered = MOCK_MEMBERS.filter(m => {
-        const matchesSearch =
-            searchQuery === "" ||
-            m.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            m.shortAddress.toLowerCase().includes(searchQuery.toLowerCase());
-
-        const matchesPlatform = filter === "ALL" || m.platform === filter;
-
-        return matchesSearch && matchesPlatform;
+  const filtered = useMemo(() => {
+    return MOCK_MEMBERS.filter((m) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        m.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.shortAddress.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPlatform = filter === "ALL" || m.platform === filter;
+      return matchesSearch && matchesPlatform;
     });
+  }, [searchQuery, filter]);
 
-    const renderItem = useCallback(
-        ({ item, index }: ListRenderItemInfo<Member>) => (
-            <MemberRow item={item} index={index} />
-        ),
-        [],
-    );
+  return (
+    <div className="flex flex-col h-full bg-[#1B1212] rounded-[2.5rem] overflow-hidden border border-[#D4AF37]/15 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+      {/* ── Header ── */}
+      <div className="px-6 pt-6 pb-4">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <p className="text-[#D4AF37] text-[9px] uppercase tracking-[0.35em] font-black">
+              Sovereign Circle
+            </p>
+            <h3 className="text-white text-xl font-semibold mt-1">Members</h3>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-green-400 text-xs font-bold">{MOCK_MEMBERS.length} active</span>
+          </div>
+        </div>
 
-    const keyExtractor = useCallback((item: Member) => item.id, []);
+        {/* Search */}
+        <div className="relative flex items-center bg-[#0F0F0F] border border-[#D4AF37]/20 rounded-2xl px-4 py-3 mb-4 focus-within:border-[#D4AF37]/50 transition-colors">
+          <Search size={16} className="text-[#D4AF37]/40" />
+          <input
+            type="text"
+            className="flex-1 bg-transparent text-white text-sm ml-3 outline-none placeholder:text-[#F3E5AB]/30"
+            placeholder="Search members..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="text-[#D4AF37]/40 hover:text-[#D4AF37]">
+              <X size={16} />
+            </button>
+          )}
+        </div>
 
-    const FILTER_OPTIONS: Array<"ALL" | "USSD" | "WEB" | "TELEGRAM"> = ["ALL", "TELEGRAM", "WEB", "USSD"];
+        {/* Filter chips */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {(["ALL", "TELEGRAM", "WEB", "USSD"] as PlatformType[]).map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setFilter(opt)}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all whitespace-nowrap ${
+                filter === opt
+                  ? "bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37]"
+                  : "border border-white/10 text-zinc-500 hover:text-zinc-300 hover:border-white/20"
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      </div>
 
-    return (
-        <View className="flex-1 bg-black/60 rounded-[2.5rem] overflow-hidden border border-yellow-400/10">
-            {/* Header */}
-            <View className="px-5 pt-5 pb-3">
-                <View className="flex-row items-center justify-between mb-4">
-                    <View>
-                        <Text className="text-yellow-400 text-[10px] uppercase tracking-[0.35em] font-black">
-                            SOVEREIGN CIRCLE
-                        </Text>
-                        <Text className="text-white text-xl font-semibold mt-0.5">
-                            Members
-                        </Text>
-                    </View>
-                    <View className="flex-row items-center gap-1.5">
-                        <View className="w-2 h-2 rounded-full bg-green-500" />
-                        <Text className="text-zinc-400 text-xs">{MOCK_MEMBERS.length} active</Text>
-                    </View>
-                </View>
+      {/* ── List ── */}
+      <div className="flex-1 overflow-y-auto custom-scroll px-2">
+        <AnimatePresence mode="popLayout">
+          {filtered.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center justify-center py-12 text-center"
+            >
+              <User size={32} className="text-zinc-600 mb-3" />
+              <p className="text-zinc-500 text-sm">No members found</p>
+            </motion.div>
+          ) : (
+            filtered.map((item, index) => (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2, delay: index * 0.05 }}
+                key={item.id}
+                className="flex items-center px-4 py-4 border-b border-[#D4AF37]/10 hover:bg-white/[0.02] transition-colors group"
+              >
+                {/* Avatar */}
+                <div className="relative w-11 h-11 rounded-2xl bg-[#D4AF37]/10 flex items-center justify-center mr-4 shrink-0 border border-[#D4AF37]/20">
+                  {item.avatarUri ? (
+                    <img src={item.avatarUri} alt={item.displayName} className="w-full h-full rounded-[14px] object-cover" />
+                  ) : (
+                    <span className="text-[#D4AF37] font-bold text-lg">
+                      {item.displayName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  {item.isCurrentRecipient && (
+                    <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#D4AF37] rounded-full flex items-center justify-center shadow-lg">
+                      <span className="text-black text-[10px] font-black">★</span>
+                    </div>
+                  )}
+                </div>
 
-                {/* Search */}
-                <View className="flex-row items-center bg-white/5 border border-white/10 rounded-2xl px-4 py-3 mb-3">
-                    <Feather name="search" size={14} color="#9CA3AF" />
-                    <TextInput
-                        className="flex-1 text-white text-sm ml-2"
-                        placeholder="Search members..."
-                        placeholderTextColor="#6B7280"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                    />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearchQuery("")} activeOpacity={0.6}>
-                            <Feather name="x" size={14} color="#9CA3AF" />
-                        </TouchableOpacity>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-white font-semibold text-sm truncate">
+                      {item.displayName}
+                    </span>
+                    {item.isCurrentRecipient && (
+                      <span className="px-2 py-0.5 bg-[#D4AF37]/15 border border-[#D4AF37]/30 rounded-full text-[#D4AF37] text-[9px] font-black tracking-widest uppercase">
+                        Next Payout
+                      </span>
                     )}
-                </View>
+                  </div>
 
-                {/* Platform filter chips */}
-                <View className="flex-row gap-2">
-                    {FILTER_OPTIONS.map(opt => (
-                        <TouchableOpacity
-                            key={opt}
-                            onPress={() => setFilter(opt)}
-                            activeOpacity={0.7}
-                            className={[
-                                "px-3 py-1.5 rounded-full border text-xs font-bold",
-                                filter === opt
-                                    ? "bg-yellow-400/15 border-yellow-400/40 text-yellow-400"
-                                    : "border-white/10 text-zinc-500",
-                            ].join(" ")}
-                        >
-                            <Text
-                                className={
-                                    filter === opt
-                                        ? "text-yellow-400 text-xs font-black tracking-wider"
-                                        : "text-zinc-500 text-xs"
-                                }
-                            >
-                                {opt}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
+                  <a
+                    href={`https://sepolia.basescan.org/address/${item.fullAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-zinc-500 hover:text-[#D4AF37] transition-colors font-mono text-xs"
+                  >
+                    {item.shortAddress}
+                  </a>
 
-            {/* List */}
-            {filtered.length === 0 ? (
-                <View className="flex-1 items-center justify-center py-12">
-                    <Feather name="users" size={32} color="#374151" />
-                    <Text className="text-zinc-600 text-sm mt-3">No members match your search</Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={filtered}
-                    renderItem={renderItem}
-                    keyExtractor={keyExtractor}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 20 }}
-                    initialNumToRender={10}
-                    maxToRenderPerBatch={10}
-                    windowSize={5}
-                />
-            )}
+                  {/* Reputation Bar */}
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${getScoreBarColor(item.reputationScore)}`}
+                        style={{ width: `${item.reputationScore}%` }}
+                      />
+                    </div>
+                    <span className={`text-[10px] font-bold w-6 text-right ${getTierColor(item.reputationTier)}`}>
+                      {item.reputationScore}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Footer */}
-            <View className="px-5 py-4 border-t border-yellow-400/10 flex-row items-center justify-between">
-                <Text className="text-zinc-600 text-xs">
-                    {filtered.length} of {MOCK_MEMBERS.length} members
-                </Text>
-                <View className="flex-row items-center gap-1.5">
-                    <View className="w-1.5 h-1.5 rounded-full bg-yellow-400 opacity-60" />
-                    <Text className="text-zinc-600 text-xs">Live sync</Text>
-                </View>
-            </View>
-        </View>
-    );
+                {/* Right side status */}
+                <div className="flex flex-col items-end gap-1.5 ml-4">
+                  {getPlatformIcon(item.platform)}
+                  <span className={`text-[9px] font-black uppercase tracking-widest ${getTierColor(item.reputationTier)}`}>
+                    {item.reputationTier}
+                  </span>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Footer ── */}
+      <div className="px-6 py-4 border-t border-[#D4AF37]/10 flex items-center justify-between bg-black/20">
+        <span className="text-zinc-500 text-xs font-medium">
+          {filtered.length} of {MOCK_MEMBERS.length} members
+        </span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]/60" />
+          <span className="text-[#D4AF37]/60 text-[10px] uppercase tracking-widest font-bold">
+            Live Sync
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 }
