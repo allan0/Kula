@@ -1,33 +1,55 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+// scripts/deploy.js
+const hre = require("hardhat");
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+async function main() {
+  const [deployer] = await hre.ethers.getSigners();
+  console.log("Deploying with account:", deployer.address);
 
-interface IPool {
-    function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external;
-    function withdraw(address asset, uint256 amount, address to) external returns (uint256);
+  // Base Sepolia USDC
+  const USDC   = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+  // Base Sepolia Aave V3 Pool
+  const AAVE   = "0x07eA79F68B2B3df564D0A34F8e19D9B1e339814b";
+  // Your AI oracle backend wallet address
+  const ORACLE = process.env.ORACLE_WALLET;
+
+  // 1. KulaYieldEngine
+  const YieldEngine = await hre.ethers.getContractFactory("KulaYieldEngine");
+  const yieldEngine = await YieldEngine.deploy(USDC, AAVE);
+  await yieldEngine.waitForDeployment();
+  console.log("KulaYieldEngine:", await yieldEngine.getAddress());
+
+  // 2. KulaPublicRegistry
+  const Registry = await hre.ethers.getContractFactory("KulaPublicRegistry");
+  const registry = await Registry.deploy(ORACLE);
+  await registry.waitForDeployment();
+  console.log("KulaPublicRegistry:", await registry.getAddress());
+
+  // 3. KulaGovernance
+  const Governance = await hre.ethers.getContractFactory("KulaGovernance");
+  const governance = await Governance.deploy(USDC);
+  await governance.waitForDeployment();
+  console.log("KulaGovernance:", await governance.getAddress());
+
+  // 4. RotaryGroup (needs all three above)
+  const RotaryGroup = await hre.ethers.getContractFactory("RotaryGroup");
+  const rotaryGroup = await RotaryGroup.deploy(
+    USDC,
+    await registry.getAddress(),
+    await yieldEngine.getAddress(),
+    await governance.getAddress()
+  );
+  await rotaryGroup.waitForDeployment();
+  console.log("RotaryGroup:", await rotaryGroup.getAddress());
+
+  // 5. Wire contracts together
+  console.log("Wiring contracts...");
+  await governance.setRotaryGroup(await rotaryGroup.getAddress());
+  await yieldEngine.setRotaryGroup(await rotaryGroup.getAddress());
+
+  console.log("✅ All contracts deployed and wired.");
 }
 
-contract KulaYieldEngine {
-    IPool public constant aavePool = IPool(0x...); // Base Sepolia Aave Address
-    IERC20 public immutable usdc;
-    uint256 public insuranceReserve;
-
-    constructor(address _usdc) {
-        usdc = IERC20(_usdc);
-    }
-
-    // Move idle ROSCA funds to Aave to earn interest
-    function optimizeLiquidity(uint256 _amount) external {
-        usdc.approve(address(aavePool), _amount);
-        aavePool.supply(address(usdc), _amount, address(this), 0);
-    }
-
-    // Withdraw and separate the "Profit" for the Insurance Fund
-    function harvestYield(uint256 _principal) external {
-        uint256 totalBalance = usdc.balanceOf(address(this)); // Simplified
-        if (totalBalance > _principal) {
-            insuranceReserve += (totalBalance - _principal);
-        }
-    }
-}
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

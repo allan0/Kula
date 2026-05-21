@@ -1,0 +1,529 @@
+-- =============================================================================
+-- FILE: db/schema.sql
+-- PURPOSE: Identity bridge database for the Kula EIP-4337 account abstraction
+--          layer. Maps Telegram users and USSD phone numbers to deterministic
+--          ERC-4337 Smart Account addresses on Base L2.
+--
+-- DESIGN PRINCIPLES:
+--   - smart_account_address is the PRIMARY KEY — it is the canonical identity
+--     across all Kula surfaces (Web, Telegram, USSD).
+--   - tg_id and phone_number are UNIQUE and NULLABLE independently — a user
+--     may onboard via USSD (phone only) or Telegram (tg_id only) before
+--     linking both identities together.
+--   - owner_eoa is the signing key derived deterministically from the user's
+--     phone_number salt via keccak256. It is NOT a user-controlled wallet —
+--     it is the Kula-managed key that signs UserOperations on behalf of the
+--     Smart Account.
+--   - All timestamps use TIMESTAMPTZ (timezone-aware) for UTC consistency
+--     across the Kenya / global user base.
+--   - Row-level audit columns (created_at, updated_at) on every table.
+--
+-- DATABASE: PostgreSQL 15+ (hosted on Supabase or Railway)
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- EXTENSIONS
+-- -----------------------------------------------------------------------------
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";      -- UUID primary keys where needed
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";        -- gen_random_uuid(), crypt()
+CREATE EXTENSION IF NOT EXISTS "citext";          -- Case-insensitive text for phone numbers
+
+-- -----------------------------------------------------------------------------
+-- ENUMS
+-- -----------------------------------------------------------------------------
+
+-- Tracks which surface the user first onboarded through
+CREATE TYPE onboarding_channel AS ENUM (
+    'USSD',         -- Africa's Talking USSD (*384#)
+    'TELEGRAM',     -- Telegram Mini App or Bot
+    'WEB',          -- Next.js frontend with wallet connect
+    'MOBILE'        -- Expo React Native app
+);
+
+-- Current lifecycle state of a Smart Account
+CREATE TYPE account_status AS ENUM (
+    'PENDING',      -- Salt derived, counterfactual address computed, not yet deployed
+    'DEPLOYED',     -- initCode executed, Smart Account live on Base L2
+    'SUSPENDED'     -- Admin-suspended (fraud, non-payment)
+);
+
+-- Reputation tier derived from on-chain MemberReputation.score
+CREATE TYPE reputation_tier AS ENUM (
+    'NEUTRAL',      -- Score 0–49
+    'TRUSTED',      -- Score 50–74
+    'ELITE',        -- Score 75–89
+    'SOVEREIGN'     -- Score 90–100
+);
+
+-- -----------------------------------------------------------------------------
+-- TABLE: users
+-- PURPOSE: Core identity table. One row per unique Kula user.
+--          smart_account_address is the canonical identity anchor.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE users (
+    -- Primary identity — the ERC-4337 Smart Account address on Base L2.
+    -- Derived deterministically: SimpleAccountFactory.getAddress(owner_eoa, salt)
+    -- where salt = keccak256(phone_number || KULA_SALT_SECRET)
+    smart_account_address   CHAR(42)            PRIMARY KEY
+                            CHECK (smart_account_address ~ '^0x[0-9a-fA-F]{40}$'),
+
+    -- Telegram user ID — integer assigned by Telegram. Globally unique.
+    -- NULL until user interacts with the Telegram bot or Mini App.
+    tg_id                   BIGINT              UNIQUE,
+
+    -- Phone number in E.164 format (+254712345678).
+    -- Used as the salt source for deterministic address derivation.
+    -- NULL until user dials the USSD shortcode.
+    phone_number            CITEXT              UNIQUE
+                            CHECK (phone_number ~ '^\+[1-9]\d{7,14}$'),
+
+    -- The Kula-managed EOA derived from phone_number.
+    -- This EOA is the owner of the Smart Account and signs all UserOperations.
+    -- Private key is NEVER stored in the DB — it is re-derived at runtime
+    -- from the phone_number salt using the server's KULA_SALT_SECRET env var.
+    owner_eoa               CHAR(42)            UNIQUE NOT NULL
+                            CHECK (owner_eoa ~ '^0x[0-9a-fA-F]{40}$'),
+
+    -- Salt used in SimpleAccountFactory.createAccount(owner, salt).
+    -- Stored as hex string. Derived as: keccak256(phone_number || KULA_SALT_SECRET)
+    -- Storing it avoids re-deriving on every request.
+    derivation_salt         CHAR(66)            UNIQUE NOT NULL
+                            CHECK (derivation_salt ~ '^0x[0-9a-fA-F]{64}$'),
+
+    -- Human-readable display name. Set from Telegram first_name or phone alias.
+    display_name            VARCHAR(100),
+
+    -- Telegram username (@handle) — optional, may be null if user has none set
+    tg_username             VARCHAR(64),
+
+    -- The channel through which this user first joined Kula
+    onboarding_channel      onboarding_channel  NOT NULL DEFAULT 'USSD',
+
+    -- Smart Account deployment status
+    account_status          account_status      NOT NULL DEFAULT 'PENDING',
+
+    -- Cached on-chain reputation score (0–100). Synced by the event listener.
+    -- Source of truth is always the RotaryGroup contract.
+    reputation_score        SMALLINT            NOT NULL DEFAULT 50
+                            CHECK (reputation_score BETWEEN 0 AND 100),
+
+    -- Computed reputation tier — updated whenever reputation_score changes
+    reputation_tier         reputation_tier     NOT NULL DEFAULT 'TRUSTED',
+
+    -- The Telegram group_id this user's primary Kula circle maps to.
+    -- Used by the event listener to send payout notifications.
+    primary_tg_group_id     BIGINT,
+
+    -- The RotaryGroup contract groupId this user is currently active in
+    primary_rotary_group_id INTEGER,
+
+    -- Whether this user has verified their identity via the AI Oracle
+    is_oracle_verified      BOOLEAN             NOT NULL DEFAULT FALSE,
+
+    -- IPFS CID of the user's oracle-verified identity document
+    identity_document_cid   TEXT,
+
+    -- Audit timestamps
+    created_at              TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+-- Indexes for the most common lookup patterns
+CREATE INDEX idx_users_tg_id
+    ON users (tg_id)
+    WHERE tg_id IS NOT NULL;
+
+CREATE INDEX idx_users_phone_number
+    ON users (phone_number)
+    WHERE phone_number IS NOT NULL;
+
+CREATE INDEX idx_users_owner_eoa
+    ON users (owner_eoa);
+
+CREATE INDEX idx_users_account_status
+    ON users (account_status);
+
+CREATE INDEX idx_users_primary_rotary_group
+    ON users (primary_rotary_group_id)
+    WHERE primary_rotary_group_id IS NOT NULL;
+
+-- -----------------------------------------------------------------------------
+-- TABLE: smart_account_deployments
+-- PURPOSE: Tracks the on-chain deployment history of Smart Accounts.
+--          A PENDING account has a counterfactual address but no deployment tx.
+--          A DEPLOYED account has a deployment_tx_hash and block_number.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE smart_account_deployments (
+    id                      UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- FK to users table
+    smart_account_address   CHAR(42)            NOT NULL
+                            REFERENCES users(smart_account_address)
+                            ON DELETE CASCADE,
+
+    -- The initCode used to deploy the Smart Account via the EntryPoint.
+    -- Format: SimpleAccountFactory_address + createAccount(owner, salt) calldata
+    init_code               TEXT                NOT NULL,
+
+    -- The UserOperation hash for the deployment operation
+    user_op_hash            CHAR(66)
+                            CHECK (user_op_hash ~ '^0x[0-9a-fA-F]{64}$'),
+
+    -- The L2 transaction hash of the deployment
+    deployment_tx_hash      CHAR(66)
+                            CHECK (deployment_tx_hash ~ '^0x[0-9a-fA-F]{64}$'),
+
+    -- Block number on Base L2 where deployment was confirmed
+    deployment_block        BIGINT,
+
+    -- Pimlico bundler used for this deployment
+    bundler_url             TEXT,
+
+    -- Gas cost in ETH (on Base L2, this is extremely low)
+    gas_cost_eth            NUMERIC(20, 18),
+
+    -- Whether the Paymaster sponsored this deployment (should always be TRUE
+    -- for USSD users — they pay zero gas)
+    paymaster_sponsored     BOOLEAN             NOT NULL DEFAULT TRUE,
+
+    deployed_at             TIMESTAMPTZ,
+    created_at              TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_deployments_smart_account
+    ON smart_account_deployments (smart_account_address);
+
+CREATE INDEX idx_deployments_tx_hash
+    ON smart_account_deployments (deployment_tx_hash)
+    WHERE deployment_tx_hash IS NOT NULL;
+
+-- -----------------------------------------------------------------------------
+-- TABLE: user_operations
+-- PURPOSE: Audit log of every UserOperation submitted on behalf of Kula users.
+--          Used by the frontend to show transaction history and by the USSD
+--          middleware to check pending tx status.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE user_operations (
+    id                      UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- FK to users
+    smart_account_address   CHAR(42)            NOT NULL
+                            REFERENCES users(smart_account_address)
+                            ON DELETE CASCADE,
+
+    -- ERC-4337 UserOperation hash (returned by the bundler)
+    user_op_hash            CHAR(66)            UNIQUE NOT NULL
+                            CHECK (user_op_hash ~ '^0x[0-9a-fA-F]{64}$'),
+
+    -- The on-chain tx hash once the bundler confirms inclusion
+    tx_hash                 CHAR(66)
+                            CHECK (tx_hash ~ '^0x[0-9a-fA-F]{64}$'),
+
+    -- The contract function being called (e.g. "contribute", "createGroup")
+    operation_type          VARCHAR(64)         NOT NULL,
+
+    -- JSON-encoded calldata for the inner transaction
+    call_data               TEXT                NOT NULL,
+
+    -- USDC value involved in the operation (6 decimals, stored as TEXT
+    -- to avoid floating point issues with large uint256 values)
+    usdc_amount             NUMERIC(30, 6),
+
+    -- The RotaryGroup groupId involved (if applicable)
+    group_id                INTEGER,
+
+    -- Status tracking
+    status                  VARCHAR(20)         NOT NULL DEFAULT 'PENDING'
+                            CHECK (status IN ('PENDING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'REPLACED')),
+
+    -- Block number when confirmed
+    confirmed_block         BIGINT,
+
+    -- Error message if status = FAILED
+    error_message           TEXT,
+
+    -- Whether the Paymaster sponsored gas for this operation
+    paymaster_sponsored     BOOLEAN             NOT NULL DEFAULT TRUE,
+
+    -- The Pimlico bundler endpoint used
+    bundler_endpoint        TEXT,
+
+    submitted_at            TIMESTAMPTZ,
+    confirmed_at            TIMESTAMPTZ,
+    created_at              TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_ops_smart_account
+    ON user_operations (smart_account_address);
+
+CREATE INDEX idx_user_ops_status
+    ON user_operations (status)
+    WHERE status IN ('PENDING', 'SUBMITTED');
+
+CREATE INDEX idx_user_ops_tx_hash
+    ON user_operations (tx_hash)
+    WHERE tx_hash IS NOT NULL;
+
+CREATE INDEX idx_user_ops_group_id
+    ON user_operations (group_id)
+    WHERE group_id IS NOT NULL;
+
+-- -----------------------------------------------------------------------------
+-- TABLE: ussd_sessions
+-- PURPOSE: Tracks active Africa's Talking USSD session state.
+--          USSD is stateless at the protocol level — we persist session
+--          context here so multi-step flows (create group, join group)
+--          survive across menu levels.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE ussd_sessions (
+    id                      UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- Africa's Talking session ID — unique per dial-in
+    at_session_id           VARCHAR(64)         UNIQUE NOT NULL,
+
+    -- Phone number of the dialling user (E.164 format)
+    phone_number            CITEXT              NOT NULL
+                            CHECK (phone_number ~ '^\+[1-9]\d{7,14}$'),
+
+    -- FK to users — may be NULL if this is a new user not yet registered
+    smart_account_address   CHAR(42)
+                            REFERENCES users(smart_account_address)
+                            ON DELETE SET NULL,
+
+    -- The accumulated USSD input string (e.g. "1*Nairobi Circle*10")
+    session_text            TEXT                NOT NULL DEFAULT '',
+
+    -- Current menu level (depth of the USSD tree)
+    menu_level              SMALLINT            NOT NULL DEFAULT 0,
+
+    -- Pending blockchain operation waiting for confirmation
+    -- Stored so we can poll and notify the user on the next USSD dial
+    pending_tx_hash         CHAR(66),
+    pending_operation       VARCHAR(64),
+
+    -- Session expiry — USSD sessions time out after 3 minutes of inactivity
+    expires_at              TIMESTAMPTZ         NOT NULL
+                            DEFAULT (NOW() + INTERVAL '3 minutes'),
+
+    created_at              TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_ussd_sessions_phone
+    ON ussd_sessions (phone_number);
+
+CREATE INDEX idx_ussd_sessions_expires
+    ON ussd_sessions (expires_at);
+
+-- Auto-cleanup expired sessions — run via pg_cron or a scheduled job
+-- DELETE FROM ussd_sessions WHERE expires_at < NOW();
+
+-- -----------------------------------------------------------------------------
+-- TABLE: telegram_auth_tokens
+-- PURPOSE: Short-lived signed tokens for the Telegram deep-link auth flow.
+--          When a user clicks a deep link from the bot to the Next.js frontend,
+--          the bot signs a payload containing tg_id. The frontend validates
+--          this token against this table before trusting the identity.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE telegram_auth_tokens (
+    id                      UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- The Telegram user ID this token authenticates
+    tg_id                   BIGINT              NOT NULL,
+
+    -- FK to users (if already registered)
+    smart_account_address   CHAR(42)
+                            REFERENCES users(smart_account_address)
+                            ON DELETE CASCADE,
+
+    -- The signed token string (JWT or HMAC-SHA256 hex)
+    token                   TEXT                UNIQUE NOT NULL,
+
+    -- Token expires after 5 minutes — single use
+    expires_at              TIMESTAMPTZ         NOT NULL
+                            DEFAULT (NOW() + INTERVAL '5 minutes'),
+
+    -- Whether this token has already been consumed by the frontend
+    used                    BOOLEAN             NOT NULL DEFAULT FALSE,
+
+    -- The IP address that redeemed the token (for fraud detection)
+    redeemed_by_ip          INET,
+
+    created_at              TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    redeemed_at             TIMESTAMPTZ
+);
+
+CREATE INDEX idx_tg_auth_tokens_tg_id
+    ON telegram_auth_tokens (tg_id);
+
+CREATE INDEX idx_tg_auth_tokens_token
+    ON telegram_auth_tokens (token);
+
+CREATE INDEX idx_tg_auth_tokens_expires
+    ON telegram_auth_tokens (expires_at)
+    WHERE used = FALSE;
+
+-- -----------------------------------------------------------------------------
+-- TABLE: group_notification_subscriptions
+-- PURPOSE: Maps RotaryGroup on-chain group IDs to Telegram group chat IDs.
+--          Used by listener.js to send ContributionReceived and PayoutExecuted
+--          event notifications to the correct Telegram group.
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE group_notification_subscriptions (
+    id                      UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- On-chain RotaryGroup groupId
+    rotary_group_id         INTEGER             NOT NULL UNIQUE,
+
+    -- Telegram group chat ID (negative integer for group chats)
+    tg_group_chat_id        BIGINT              NOT NULL,
+
+    -- Human-readable group name (cached from on-chain)
+    group_name              VARCHAR(200),
+
+    -- Whether notifications are currently active for this group
+    notifications_active    BOOLEAN             NOT NULL DEFAULT TRUE,
+
+    -- The block number from which the listener should start indexing
+    -- for this group (set at group creation time)
+    listener_start_block    BIGINT              NOT NULL DEFAULT 0,
+
+    created_at              TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ         NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_group_notif_rotary_id
+    ON group_notification_subscriptions (rotary_group_id);
+
+CREATE INDEX idx_group_notif_tg_chat_id
+    ON group_notification_subscriptions (tg_group_chat_id);
+
+-- -----------------------------------------------------------------------------
+-- TRIGGER: auto-update updated_at on row modification
+-- Applied to all tables that have an updated_at column.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION trigger_set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_updated_at_users
+    BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+
+CREATE TRIGGER set_updated_at_ussd_sessions
+    BEFORE UPDATE ON ussd_sessions
+    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+
+CREATE TRIGGER set_updated_at_group_notif
+    BEFORE UPDATE ON group_notification_subscriptions
+    FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- TRIGGER: auto-update reputation_tier when reputation_score changes
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION trigger_update_reputation_tier()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.reputation_tier = CASE
+        WHEN NEW.reputation_score >= 90 THEN 'SOVEREIGN'::reputation_tier
+        WHEN NEW.reputation_score >= 75 THEN 'ELITE'::reputation_tier
+        WHEN NEW.reputation_score >= 50 THEN 'TRUSTED'::reputation_tier
+        ELSE 'NEUTRAL'::reputation_tier
+    END;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_reputation_tier
+    BEFORE INSERT OR UPDATE OF reputation_score ON users
+    FOR EACH ROW EXECUTE FUNCTION trigger_update_reputation_tier();
+
+-- -----------------------------------------------------------------------------
+-- VIEWS
+-- -----------------------------------------------------------------------------
+
+-- Convenience view for the frontend identity hub — joins user identity
+-- with their latest deployment status
+CREATE VIEW user_identity_summary AS
+SELECT
+    u.smart_account_address,
+    u.tg_id,
+    u.phone_number,
+    u.owner_eoa,
+    u.display_name,
+    u.tg_username,
+    u.onboarding_channel,
+    u.account_status,
+    u.reputation_score,
+    u.reputation_tier,
+    u.is_oracle_verified,
+    u.primary_rotary_group_id,
+    u.primary_tg_group_id,
+    d.deployment_tx_hash,
+    d.deployed_at,
+    d.paymaster_sponsored AS deployment_sponsored,
+    u.created_at AS member_since
+FROM users u
+LEFT JOIN smart_account_deployments d
+    ON u.smart_account_address = d.smart_account_address
+    AND d.deployment_tx_hash IS NOT NULL
+ORDER BY u.created_at DESC;
+
+-- Active pending UserOperations — polled by the USSD middleware
+CREATE VIEW pending_user_operations AS
+SELECT
+    uo.id,
+    uo.smart_account_address,
+    u.phone_number,
+    u.tg_id,
+    uo.user_op_hash,
+    uo.operation_type,
+    uo.usdc_amount,
+    uo.group_id,
+    uo.status,
+    uo.submitted_at,
+    uo.bundler_endpoint
+FROM user_operations uo
+JOIN users u ON uo.smart_account_address = u.smart_account_address
+WHERE uo.status IN ('PENDING', 'SUBMITTED')
+ORDER BY uo.created_at ASC;
+
+-- -----------------------------------------------------------------------------
+-- SEED DATA — development environment only
+-- Remove this block before running in production
+-- -----------------------------------------------------------------------------
+
+-- INSERT INTO users (
+--     smart_account_address,
+--     owner_eoa,
+--     derivation_salt,
+--     phone_number,
+--     tg_id,
+--     display_name,
+--     onboarding_channel,
+--     account_status,
+--     reputation_score
+-- ) VALUES (
+--     '0xDEAD000000000000000000000000000000000001',
+--     '0xDEAD000000000000000000000000000000000002',
+--     '0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+--     '+254712345678',
+--     123456789,
+--     'Test Member',
+--     'USSD',
+--     'DEPLOYED',
+--     72
+-- );
