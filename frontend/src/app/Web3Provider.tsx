@@ -16,7 +16,7 @@ import useKulaStore from '@/store/useKulaStore';
 import '@rainbow-me/rainbowkit/styles.css';
 
 // ---------------------------------------------------------------------------
-// 1. STABLE INFRASTRUCTURE SETUP
+// 1. INFRASTRUCTURE SETUP
 // ---------------------------------------------------------------------------
 
 const queryClient = new QueryClient();
@@ -96,7 +96,7 @@ function SmartAccountProvisioner({ children }: { children: ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. MAIN PROVIDER COMPONENT
+// 3. MAIN WEB3 PROVIDER
 // ---------------------------------------------------------------------------
 
 export default function Web3Provider({ children }: { children: React.ReactNode }) {
@@ -112,7 +112,7 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Manual Wagmi Config (Prevents Proxy Initialization Error)
+  // Create Wagmi Config with RainbowKit Connectors
   const wagmiConfig = useMemo(() => {
     const connectors = connectorsForWallets(
       [
@@ -146,7 +146,7 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
           theme: 'dark',
           accentColor: '#D4AF37',
           showWalletLoginFirst: false,
-          logo: '/assets/kulalogo.png', // Fixed 404 path
+          logo: '/assets/kulalogo.png', // FIXED: No more 404
         },
         externalWallets: {
           telegram: {
@@ -170,6 +170,11 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
             })}
             modalSize="compact"
           >
+            {/* 
+              CRITICAL: SmartAccountProvisioner must be inside 
+              RainbowKitProvider because it uses Wagmi hooks 
+              that RainbowKit configures.
+            */}
             <SmartAccountProvisioner>
               {children}
             </SmartAccountProvisioner>
