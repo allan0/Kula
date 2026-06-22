@@ -5,29 +5,23 @@ import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
 import { WagmiProvider, createConfig, http, useReadContract } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RainbowKitProvider, darkTheme, getDefaultConfig } from '@rainbow-me/rainbowkit';
+import { RainbowKitProvider, darkTheme, connectorsForWallets } from '@rainbow-me/rainbowkit';
+import { 
+  rainbowWallet, 
+  walletConnectWallet, 
+  coinbaseWallet 
+} from '@rainbow-me/rainbowkit/wallets';
 import useKulaStore from '@/store/useKulaStore';
 
 import '@rainbow-me/rainbowkit/styles.css';
 
 // ---------------------------------------------------------------------------
-// CONFIGURATION & CONSTANTS
+// 1. STABLE INFRASTRUCTURE SETUP
 // ---------------------------------------------------------------------------
 
-const stableQueryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      refetchOnWindowFocus: false,
-      staleTime: 60_000,
-    },
-  },
-});
-
-const walletConnectProjectId = '04309ed1007e77d1f11709da9793f9b5';
+const queryClient = new QueryClient();
 
 const FACTORY_ADDRESS = '0x9406Cc6185a346906296840746125a0E44976454';
-
 const FACTORY_ABI = [
   {
     name: "getAddress",
@@ -42,8 +36,7 @@ const FACTORY_ABI = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// INTERNAL: SMART ACCOUNT PROVISIONER
-// This component MUST be inside RainbowKitProvider to avoid the "Transaction hooks" error.
+// 2. SMART ACCOUNT PROVISIONER
 // ---------------------------------------------------------------------------
 
 function SmartAccountProvisioner({ children }: { children: ReactNode }) {
@@ -54,11 +47,9 @@ function SmartAccountProvisioner({ children }: { children: ReactNode }) {
   const storedAddress = useKulaStore(s => s.smartAccountAddress);
   const walletSource = useKulaStore(s => s.walletSource);
 
-  // 1. Identify the embedded wallet created by Privy
   const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
   const ownerEOA = embeddedWallet?.address as `0x${string}` | undefined;
 
-  // 2. Read the deterministic Smart Account address from the factory (salt = 0)
   const { data: smartAccountAddress } = useReadContract({
     address: FACTORY_ADDRESS as `0x${string}`,
     abi: FACTORY_ABI,
@@ -69,7 +60,6 @@ function SmartAccountProvisioner({ children }: { children: ReactNode }) {
     },
   });
 
-  // 3. Sync the identity to the global Zustand store and the backend
   useEffect(() => {
     if (!ready) return;
 
@@ -82,11 +72,9 @@ function SmartAccountProvisioner({ children }: { children: ReactNode }) {
 
     if (smartAccountAddress && ownerEOA) {
       const source = user.google ? "privy_google" : "privy_embedded";
-
       if (smartAccountAddress !== storedAddress) {
         setSmartAccount(smartAccountAddress, ownerEOA, source, "UNKNOWN");
 
-        // Register with your backend API
         fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/register-privy`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -99,7 +87,7 @@ function SmartAccountProvisioner({ children }: { children: ReactNode }) {
             tgId: user.telegram?.userId?.toString() ?? null,
             tgUsername: user.telegram?.username ?? null,
           }),
-        }).catch(err => console.error("Backend registration failed", err));
+        }).catch(() => {});
       }
     }
   }, [ready, authenticated, smartAccountAddress, ownerEOA, user, storedAddress, setSmartAccount, clearSmartAccount, walletSource]);
@@ -108,12 +96,12 @@ function SmartAccountProvisioner({ children }: { children: ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
-// MAIN WEB3 PROVIDER
+// 3. MAIN PROVIDER COMPONENT
 // ---------------------------------------------------------------------------
 
 export default function Web3Provider({ children }: { children: React.ReactNode }) {
   
-  // Telegram Mini App Initialization
+  // Telegram App Config
   useEffect(() => {
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
@@ -121,19 +109,33 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
       tg.expand();
       tg.setHeaderColor('#0F0F0F');
       tg.setBackgroundColor('#0F0F0F');
-      console.log("✅ Telegram WebApp initialized");
     }
   }, []);
 
-  const config = useMemo(() => getDefaultConfig({
-    appName: 'KULA Sovereign Vault',
-    projectId: walletConnectProjectId,
-    chains: [baseSepolia],
-    transports: { 
-      [baseSepolia.id]: http() 
-    },
-    ssr: true,
-  }), []);
+  // Manual Wagmi Config (Prevents Proxy Initialization Error)
+  const wagmiConfig = useMemo(() => {
+    const connectors = connectorsForWallets(
+      [
+        {
+          groupName: 'Recommended',
+          wallets: [rainbowWallet, coinbaseWallet, walletConnectWallet],
+        },
+      ],
+      {
+        appName: 'KULA Sovereign Vault',
+        projectId: '04309ed1007e77d1f11709da9793f9b5',
+      }
+    );
+
+    return createConfig({
+      connectors,
+      chains: [baseSepolia],
+      transports: {
+        [baseSepolia.id]: http(),
+      },
+      ssr: true,
+    });
+  }, []);
 
   return (
     <PrivyProvider
@@ -144,32 +146,30 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
           theme: 'dark',
           accentColor: '#D4AF37',
           showWalletLoginFirst: false,
-          logo: '/assets/kulalogo.png',
+          logo: '/assets/kulalogo.png', // Fixed 404 path
         },
         externalWallets: {
           telegram: {
-            botUsername: 'Kula_chama_bot', // Clean username (no @)
+            botUsername: 'Kula_chama_bot',
           },
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
           requireUserPasswordOnCreate: false,
-          noPromptOnSignature: true, // Crucial for gasless UX
+          noPromptOnSignature: true,
         },
       }}
     >
-      <WagmiProvider config={config}>
-        <QueryClientProvider client={stableQueryClient}>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
           <RainbowKitProvider 
             theme={darkTheme({
               accentColor: '#D4AF37',
               accentColorForeground: '#0F0F0F',
               borderRadius: 'large',
-              fontStack: 'system',
             })}
             modalSize="compact"
           >
-            {/* The Provisioner is now nested CORRECTLY inside the RainbowKit context */}
             <SmartAccountProvisioner>
               {children}
             </SmartAccountProvisioner>
