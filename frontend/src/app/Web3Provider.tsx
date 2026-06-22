@@ -15,12 +15,10 @@ import useKulaStore from '@/store/useKulaStore';
 
 import '@rainbow-me/rainbowkit/styles.css';
 
-// ---------------------------------------------------------------------------
-// 1. INFRASTRUCTURE SETUP
-// ---------------------------------------------------------------------------
-
+// 1. Setup Query Client
 const queryClient = new QueryClient();
 
+// 2. Constants for Smart Account
 const FACTORY_ADDRESS = '0x9406Cc6185a346906296840746125a0E44976454';
 const FACTORY_ABI = [
   {
@@ -36,9 +34,8 @@ const FACTORY_ABI = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// 2. SMART ACCOUNT PROVISIONER
+// SMART ACCOUNT PROVISIONER
 // ---------------------------------------------------------------------------
-
 function SmartAccountProvisioner({ children }: { children: ReactNode }) {
   const { ready, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
@@ -55,14 +52,11 @@ function SmartAccountProvisioner({ children }: { children: ReactNode }) {
     abi: FACTORY_ABI,
     functionName: "getAddress",
     args: ownerEOA ? [ownerEOA, BigInt(0)] : undefined,
-    query: {
-      enabled: !!ownerEOA && authenticated,
-    },
+    query: { enabled: !!ownerEOA && authenticated },
   });
 
   useEffect(() => {
     if (!ready) return;
-
     if (!authenticated || !user) {
       if (storedAddress && walletSource !== "telegram" && walletSource !== "ussd") {
         clearSmartAccount();
@@ -74,7 +68,6 @@ function SmartAccountProvisioner({ children }: { children: ReactNode }) {
       const source = user.google ? "privy_google" : "privy_embedded";
       if (smartAccountAddress !== storedAddress) {
         setSmartAccount(smartAccountAddress, ownerEOA, source, "UNKNOWN");
-
         fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/register-privy`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -96,12 +89,10 @@ function SmartAccountProvisioner({ children }: { children: ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. MAIN WEB3 PROVIDER
+// MAIN WEB3 PROVIDER
 // ---------------------------------------------------------------------------
-
 export default function Web3Provider({ children }: { children: React.ReactNode }) {
   
-  // Telegram App Config
   useEffect(() => {
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
@@ -112,7 +103,7 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Create Wagmi Config with RainbowKit Connectors
+  // Use connectorsForWallets + createConfig for maximum compatibility with Privy
   const wagmiConfig = useMemo(() => {
     const connectors = connectorsForWallets(
       [
@@ -146,12 +137,10 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
           theme: 'dark',
           accentColor: '#D4AF37',
           showWalletLoginFirst: false,
-          logo: '/assets/kulalogo.png', // FIXED: No more 404
+          logo: '/assets/kulalogo.png', 
         },
         externalWallets: {
-          telegram: {
-            botUsername: 'Kula_chama_bot',
-          },
+          telegram: { botUsername: 'Kula_chama_bot' },
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
@@ -170,11 +159,6 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
             })}
             modalSize="compact"
           >
-            {/* 
-              CRITICAL: SmartAccountProvisioner must be inside 
-              RainbowKitProvider because it uses Wagmi hooks 
-              that RainbowKit configures.
-            */}
             <SmartAccountProvisioner>
               {children}
             </SmartAccountProvisioner>
